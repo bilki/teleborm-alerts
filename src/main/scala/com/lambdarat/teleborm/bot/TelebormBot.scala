@@ -15,7 +15,7 @@ import org.http4s.ember.server._
 import org.http4s.implicits._
 import sttp.client3.SttpBackend
 
-class TelebormBot[F[_]: Async](backend: SttpBackend[F, _], token: String, webhookUrl: String)
+class TelebormBot[F[_]: Async](backend: SttpBackend[F, _], token: String, webhookUrl: Uri)
     extends TelegramBot[F](token, backend)
     with Commands[F] {
 
@@ -42,7 +42,7 @@ class TelebormBot[F[_]: Async](backend: SttpBackend[F, _], token: String, webhoo
     .use(_ => Async[F].never)
 
   override def run(): F[Unit] = {
-    val setWebhookUrlRequest = request(SetWebhook(url = webhookUrl))
+    val setWebhookUrlRequest = request(SetWebhook(url = webhookUrl.toString))
 
     Async[F].ifM(setWebhookUrlRequest)(
       webhookServer,
