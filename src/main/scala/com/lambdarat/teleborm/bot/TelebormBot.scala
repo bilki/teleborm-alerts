@@ -4,6 +4,7 @@ import cats.effect.kernel.Async
 import cats.syntax.all._
 import com.bot4s.telegram.api.declarative.Commands
 import com.bot4s.telegram.cats.TelegramBot
+import com.bot4s.telegram.Implicits._
 import com.bot4s.telegram.marshalling._
 import com.bot4s.telegram.methods.SetWebhook
 import com.bot4s.telegram.models.Update
@@ -18,6 +19,7 @@ import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.syntax._
 import cats.effect.kernel.Resource
 import org.http4s.server.Server
+import com.bot4s.telegram.methods.ParseMode
 
 class TelebormBot[F[_]: Async: Logger](backend: SttpBackend[F, _], token: String, webhookUrl: Uri)
     extends TelegramBot[F](token, backend)
@@ -43,6 +45,30 @@ class TelebormBot[F[_]: Async: Logger](backend: SttpBackend[F, _], token: String
     .withPort(port"9000")
     .withHttpApp(webhookHandler)
     .build
+
+  // Crude, brutal escape for markdown v2
+  private def escape(text: String): String = text
+    .replace(".", "\\.")
+    .replace("|", "\\|")
+    .replace("-", "\\-")
+
+  // Greeting/help message
+  onCommand("start" | "ayuda") { implicit msg =>
+    val helpMessage =
+      s"""Bienvenido al buscador y notificador de publicaciones del ${"BORM".bold}.
+      |
+      |Este pequeño bot permite buscar por palabras clave, así como establecer
+      |alertas para recibir mensajes con las nuevas publicaciones diarias.
+      |
+      |Puedes utilizar los siguientes comandos:
+      |
+      |/start o /ayuda - Recibe de nuevo este mensaje con la ayuda
+      |
+      |/buscar palabra1 palabra2 palabraN - Busca publicaciones que contengan ${"todas".bold} estas palabras
+      """.stripMargin
+
+    reply(escape(helpMessage), parseMode = ParseMode.MarkdownV2.some).void
+  }
 
   override def run(): F[Unit] = {
     val registerWebhook = for {
