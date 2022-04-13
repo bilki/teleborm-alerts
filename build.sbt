@@ -9,10 +9,11 @@ lazy val root = project
     version      := "0.1.0",
     scalacOptions ++= Seq("-Wunused", "-deprecation"),
     libraryDependencies ++= Seq(
-      "org.typelevel"                 %% "cats-effect"                   % "3.3.11",
+      "ch.qos.logback"                 % "logback-classic"               % "1.2.10",
       "com.bot4s"                     %% "telegram-core"                 % "5.4.1",
       "com.bot4s"                     %% "telegram-akka"                 % "5.4.1",
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % "3.5.1",
+      "com.softwaremill.sttp.client3" %% "slf4j-backend"                 % "3.5.1",
       "com.github.pureconfig"         %% "pureconfig"                    % "0.17.1",
       "com.github.pureconfig"         %% "pureconfig-cats-effect"        % "0.17.1",
       "com.github.pureconfig"         %% "pureconfig-http4s"             % "0.17.1",
@@ -20,6 +21,9 @@ lazy val root = project
       "org.http4s"                    %% "http4s-dsl"                    % "0.23.11",
       "org.http4s"                    %% "http4s-circe"                  % "0.23.11",
       "org.http4s"                    %% "http4s-ember-server"           % "0.23.11",
+      "org.typelevel"                 %% "cats-effect"                   % "3.3.11",
+      "org.typelevel"                 %% "log4cats-core"                 % "2.2.0",
+      "org.typelevel"                 %% "log4cats-slf4j"                % "2.2.0",
       "org.scalameta"                 %% "munit"                         % "0.7.29" % Test
     )
   )

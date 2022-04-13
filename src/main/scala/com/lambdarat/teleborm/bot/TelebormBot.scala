@@ -14,8 +14,12 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.ember.server._
 import org.http4s.implicits._
 import sttp.client3.SttpBackend
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.syntax._
+import cats.effect.kernel.Resource
+import org.http4s.server.Server
 
-class TelebormBot[F[_]: Async](backend: SttpBackend[F, _], token: String, webhookUrl: Uri)
+class TelebormBot[F[_]: Async: Logger](backend: SttpBackend[F, _], token: String, webhookUrl: Uri)
     extends TelegramBot[F](token, backend)
     with Commands[F] {
 
@@ -33,20 +37,24 @@ class TelebormBot[F[_]: Async](backend: SttpBackend[F, _], token: String, webhoo
     }
     .orNotFound
 
-  val webhookServer: F[Unit] = EmberServerBuilder
+  val webhookServer: Resource[F, Server] = EmberServerBuilder
     .default[F]
     .withHost(ipv4"0.0.0.0")
     .withPort(port"9000")
     .withHttpApp(webhookHandler)
     .build
-    .use(_ => Async[F].never)
 
   override def run(): F[Unit] = {
-    val setWebhookUrlRequest = request(SetWebhook(url = webhookUrl.toString))
+    val registerWebhook = for {
+      _            <- info"Attempting to register webhook handler at ${webhookUrl.toString}..."
+      isRegistered <- request(SetWebhook(url = webhookUrl.toString))
+    } yield isRegistered
 
-    Async[F].ifM(setWebhookUrlRequest)(
-      webhookServer,
-      Async[F].raiseError(new Exception(s"Could not set webhook URL: ${webhookUrl}"))
-    )
+    webhookServer.use { _ =>
+      Async[F].ifM(registerWebhook)(
+        info"Registered webhook handler at ${webhookUrl.toString}" *> Async[F].never,
+        Async[F].raiseError(new Exception(s"Could not set webhook URL to ${webhookUrl}"))
+      )
+    }
   }
 }
