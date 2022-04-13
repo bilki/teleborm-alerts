@@ -11,6 +11,7 @@ import com.lambdarat.teleborm.config.TelegramConfig
 import cats.effect.kernel.Sync
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import sttp.client3.logging.slf4j.Slf4jLoggingBackend
+import com.lambdarat.teleborm.handler.BormCommandHandler
 
 object Main extends IOApp {
   def run(args: List[String]): IO[ExitCode] = {
@@ -20,7 +21,13 @@ object Main extends IOApp {
       for {
         config <- ConfigSource.default.at("telegram").loadF[IO, TelegramConfig]()
         _      <- unsafeLogger[IO].info("Loaded config, initializing bot...")
-        bot = new TelebormBot[IO](Slf4jLoggingBackend(client), config.token, config.webhook)
+        commandHandler = new BormCommandHandler[IO]
+        bot = new TelebormBot[IO](
+          Slf4jLoggingBackend(client),
+          config.token,
+          config.webhook,
+          commandHandler
+        )
         _ <- bot.run()
       } yield ExitCode.Success
     }

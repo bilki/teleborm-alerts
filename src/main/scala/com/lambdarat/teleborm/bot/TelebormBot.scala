@@ -20,9 +20,18 @@ import org.typelevel.log4cats.syntax._
 import cats.effect.kernel.Resource
 import org.http4s.server.Server
 import com.bot4s.telegram.methods.ParseMode
+import com.lambdarat.teleborm.handler.BormCommandHandler
+import java.time.format.DateTimeFormatter
+import com.bot4s.telegram.methods.SetMyCommands
+import com.bot4s.telegram.models.BotCommand
+import java.time.LocalDate
 
-class TelebormBot[F[_]: Async: Logger](backend: SttpBackend[F, _], token: String, webhookUrl: Uri)
-    extends TelegramBot[F](token, backend)
+class TelebormBot[F[_]: Async: Logger](
+    backend: SttpBackend[F, _],
+    token: String,
+    webhookUrl: Uri,
+    handler: BormCommandHandler[F]
+) extends TelegramBot[F](token, backend)
     with Commands[F] {
 
   private val dsl = new Http4sDsl[F] {}
@@ -51,6 +60,20 @@ class TelebormBot[F[_]: Async: Logger](backend: SttpBackend[F, _], token: String
     .replace(".", "\\.")
     .replace("|", "\\|")
     .replace("-", "\\-")
+    .replace("_", "\\_")
+
+  private val botCommands =
+    List(
+      BotCommand("ayuda", "Recibe de nuevo el mensaje inicial de ayuda"),
+      BotCommand(
+        "buscar",
+        "palabra1 palabra2 palabraN - Busca publicaciones que contengan todas las palabras"
+      ),
+      BotCommand(
+        "buscar_desde",
+        "2022-01-01 palabra1 palabra2 palabraN - Busca publicaciones que contengan todas las palabras desde la fecha indicada"
+      )
+    )
 
   // Greeting/help message
   onCommand("start" | "ayuda") { implicit msg =>
@@ -65,20 +88,63 @@ class TelebormBot[F[_]: Async: Logger](backend: SttpBackend[F, _], token: String
       |/start o /ayuda - Recibe de nuevo este mensaje con la ayuda
       |
       |/buscar palabra1 palabra2 palabraN - Busca publicaciones que contengan ${"todas".bold} estas palabras
+      |
+      |/buscar_desde 2022-01-01 palabra1 palabra2 palabraN - Busca publicaciones que contengan ${"todas".bold} estas palabras desde la fecha indicada
       """.stripMargin
 
     reply(escape(helpMessage), parseMode = ParseMode.MarkdownV2.some).void
   }
 
+  // Search by words, optionally by date
+  onCommand("buscar") { implicit msg =>
+    withArgs { args =>
+      if (args.isEmpty) {
+        reply("La búsqueda no funcionará si no se introduce al menos una palabra").void
+      } else {
+        for {
+          searchResult <- handler.handleCommand(BormCommand.Search(args.toList, none[LocalDate]))
+          _            <- reply(searchResult)
+        } yield ()
+      }
+    }
+  }
+
+  onCommand("buscar_desde") { implicit msg =>
+    withArgs {
+      case Seq(rawDate, word, words @ _*) =>
+        val dateOrError =
+          Either.catchNonFatal(DateTimeFormatter.ISO_DATE.parse(rawDate, LocalDate.from _))
+
+        dateOrError.fold(
+          _ => reply(s"La fecha proporcionada ${rawDate} no es válida").void,
+          from =>
+            for {
+              commandResult <- handler.handleCommand(
+                BormCommand.Search(word :: words.toList, from.some)
+              )
+              _ <- reply(commandResult)
+            } yield ()
+        )
+      case _ =>
+        reply("La búsqueda no funcionará si no se introduce al menos la fecha y una palabra").void
+    }
+  }
+
   override def run(): F[Unit] = {
+    val commandNames = botCommands.map(_.command).mkString("[", ", ", "]")
+
     val registerWebhook = for {
       _            <- info"Attempting to register webhook handler at ${webhookUrl.toString}..."
       isRegistered <- request(SetWebhook(url = webhookUrl.toString))
-    } yield isRegistered
+      _            <- info"Attempting to set commands ${commandNames}"
+      commandsSet  <- request(SetMyCommands(botCommands))
+    } yield isRegistered && commandsSet
 
     webhookServer.use { _ =>
       Async[F].ifM(registerWebhook)(
-        info"Registered webhook handler at ${webhookUrl.toString}" *> Async[F].never,
+        info"Registered webhook handler at ${webhookUrl.toString} with commands ${commandNames}" *> Async[
+          F
+        ].never,
         Async[F].raiseError(new Exception(s"Could not set webhook URL to ${webhookUrl}"))
       )
     }
