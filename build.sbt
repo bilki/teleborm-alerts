@@ -1,6 +1,7 @@
-ThisBuild / scalaVersion      := "2.13.8"
-ThisBuild / semanticdbEnabled := true
-ThisBuild / semanticdbVersion := scalafixSemanticdb.revision
+ThisBuild / scalaVersion                              := "2.13.8"
+ThisBuild / semanticdbEnabled                         := true
+ThisBuild / semanticdbVersion                         := scalafixSemanticdb.revision
+ThisBuild / scalafixDependencies += "com.nequissimus" %% "sort-imports" % "0.6.1"
 
 lazy val root = project
   .in(file("."))
@@ -14,11 +15,13 @@ lazy val root = project
       "ch.qos.logback"                 % "logback-classic"               % "1.2.10",
       "com.bot4s"                     %% "telegram-core"                 % "5.4.1",
       "com.bot4s"                     %% "telegram-akka"                 % "5.4.1",
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % "3.5.1",
-      "com.softwaremill.sttp.client3" %% "slf4j-backend"                 % "3.5.1",
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % "3.5.2",
+      "com.softwaremill.sttp.client3" %% "slf4j-backend"                 % "3.5.2",
+      "com.softwaremill.sttp.client3" %% "circe"                         % "3.5.2",
       "com.github.pureconfig"         %% "pureconfig"                    % "0.17.1",
       "com.github.pureconfig"         %% "pureconfig-cats-effect"        % "0.17.1",
       "com.github.pureconfig"         %% "pureconfig-http4s"             % "0.17.1",
+      "com.github.pureconfig"         %% "pureconfig-sttp"               % "0.17.1",
       "org.http4s"                    %% "http4s-core"                   % "0.23.11",
       "org.http4s"                    %% "http4s-dsl"                    % "0.23.11",
       "org.http4s"                    %% "http4s-circe"                  % "0.23.11",
