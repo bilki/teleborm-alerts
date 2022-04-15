@@ -1,16 +1,26 @@
 package com.lambdarat.teleborm.handler
 
 import com.lambdarat.teleborm.bot.BormCommand
+import com.lambdarat.teleborm.bot.Pagination
 import com.lambdarat.teleborm.client.BormClient
-import com.lambdarat.teleborm.model.SearchResult
+import com.lambdarat.teleborm.config.BormConfig
+import com.lambdarat.teleborm.model.SearchCommandResult
 
 import cats.effect.kernel.Async
 import cats.syntax.all._
 
-class BormCommandHandler[F[_]: Async](bormClient: BormClient[F]) {
+class BormCommandHandler[F[_]: Async](bormClient: BormClient[F], bormConfig: BormConfig) {
 
-  def handleSearch(search: BormCommand.Search): F[SearchResult] =
-    bormClient.search(search.words, search.page)
+  def handle(search: BormCommand.Search): F[SearchCommandResult] =
+    for {
+      searchResult <- bormClient.search(search.words, search.page)
+      pagination = Pagination.prepareSearchButtons(
+        search.words,
+        search.page,
+        searchResult.total,
+        bormConfig.limit
+      )
+    } yield SearchCommandResult(searchResult, pagination)
 
   def handleCommand(command: BormCommand): F[String] =
     command match {

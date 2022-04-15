@@ -22,7 +22,7 @@ import sttp.client3.SttpBackend
 class TelebormBot[F[_]: Async: Logger](
     backend: SttpBackend[F, _],
     token: String,
-    handler: BormCommandHandler[F]
+    commandHandler: BormCommandHandler[F]
 ) extends TelegramBot[F](token, backend)
     with Commands[F]
     with Callbacks[F] {
@@ -54,22 +54,15 @@ class TelebormBot[F[_]: Async: Logger](
       _ <- command match {
         case search: BormCommand.Search =>
           for {
-            searchResult <- handler.handleSearch(search)
+            commandResult <- commandHandler.handle(search)
             _ <- request(
               EditMessageText(
                 chatId = cb.message.map(_.chat.chatId),
                 messageId = cb.message.map(_.messageId),
                 parseMode = ParseMode.MarkdownV2.some,
                 disableWebPagePreview = true.some,
-                text = searchResult.pretty.escapeMd,
-                replyMarkup = Pagination
-                  .prepareSearchButtons(
-                    search.words,
-                    search.page,
-                    searchResult.total,
-                    limit = 5
-                  )
-                  .some
+                text = commandResult.searchResult.pretty.escapeMd,
+                replyMarkup = commandResult.pagination.some
               )
             )
           } yield ()
@@ -90,15 +83,13 @@ class TelebormBot[F[_]: Async: Logger](
         reply(Messages.missingArgsForSearch).void
       } else {
         val attemptCommand = for {
-          searchResult <- handler.handleSearch(
+          commandResult <- commandHandler.handle(
             BormCommand.Search(args.toList, page = 0, none[LocalDate])
           )
           _ <- replyMdV2(
-            searchResult.pretty.escapeMd,
+            commandResult.searchResult.pretty.escapeMd,
             disableWebPagePreview = true.some,
-            replyMarkup = Pagination
-              .prepareSearchButtons(args.toList, currentPage = 0, searchResult.total, limit = 5)
-              .some
+            replyMarkup = commandResult.pagination.some
           )
         } yield ()
 
@@ -117,7 +108,7 @@ class TelebormBot[F[_]: Async: Logger](
           _ => reply(Messages.invalidDateForSearch(rawDate)).void,
           { _ =>
             val attemptCommand = for {
-              searchResult <- handler.handleCommand(
+              searchResult <- commandHandler.handleCommand(
                 BormCommand.Search(word :: words.toList, page = 0, none[LocalDate])
               )
               _ <- replyMdV2(

@@ -27,7 +27,7 @@ object Main extends IOApp {
         config <- ConfigSource.default.loadF[IO, TelebormConfig]()
         _      <- unsafeLogger[IO].info("Loaded config, initializing bot...")
         bormClient     = new BormClient[IO](loggingSttpClient, config.borm)
-        commandHandler = new BormCommandHandler[IO](bormClient)
+        commandHandler = new BormCommandHandler[IO](bormClient, config.borm)
         bot = new TelebormBot[IO](
           loggingSttpClient,
           config.telegram.token,
