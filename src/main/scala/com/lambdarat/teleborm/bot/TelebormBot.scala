@@ -1,12 +1,21 @@
 package com.lambdarat.teleborm.bot
 
+import com.lambdarat.teleborm.handler.BormCommandHandler
+
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
 import cats.effect.kernel.Async
+import cats.effect.kernel.Resource
 import cats.syntax.all._
+import com.bot4s.telegram.Implicits._
 import com.bot4s.telegram.api.declarative.Commands
 import com.bot4s.telegram.cats.TelegramBot
-import com.bot4s.telegram.Implicits._
 import com.bot4s.telegram.marshalling._
+import com.bot4s.telegram.methods.ParseMode
+import com.bot4s.telegram.methods.SetMyCommands
 import com.bot4s.telegram.methods.SetWebhook
+import com.bot4s.telegram.models.BotCommand
 import com.bot4s.telegram.models.Update
 import com.bot4s.telegram.models.User
 import com.comcast.ip4s._
@@ -14,17 +23,10 @@ import org.http4s._
 import org.http4s.dsl.Http4sDsl
 import org.http4s.ember.server._
 import org.http4s.implicits._
-import sttp.client3.SttpBackend
+import org.http4s.server.Server
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.syntax._
-import cats.effect.kernel.Resource
-import org.http4s.server.Server
-import com.bot4s.telegram.methods.ParseMode
-import com.lambdarat.teleborm.handler.BormCommandHandler
-import java.time.format.DateTimeFormatter
-import com.bot4s.telegram.methods.SetMyCommands
-import com.bot4s.telegram.models.BotCommand
-import java.time.LocalDate
+import sttp.client3.SttpBackend
 
 class TelebormBot[F[_]: Async: Logger](
     backend: SttpBackend[F, _],
@@ -60,7 +62,6 @@ class TelebormBot[F[_]: Async: Logger](
     .replace(".", "\\.")
     .replace("|", "\\|")
     .replace("-", "\\-")
-    .replace("_", "\\_")
 
   private val botCommands =
     List(
@@ -89,7 +90,7 @@ class TelebormBot[F[_]: Async: Logger](
       |
       |/buscar palabra1 palabra2 palabraN - Busca publicaciones que contengan ${"todas".bold} estas palabras
       |
-      |/buscar_desde 2022-01-01 palabra1 palabra2 palabraN - Busca publicaciones que contengan ${"todas".bold} estas palabras desde la fecha indicada
+      |/buscar\\_desde 2022-01-01 palabra1 palabra2 palabraN - Busca publicaciones que contengan ${"todas".bold} estas palabras desde la fecha indicada
       """.stripMargin
 
     reply(escape(helpMessage), parseMode = ParseMode.MarkdownV2.some).void
@@ -103,7 +104,11 @@ class TelebormBot[F[_]: Async: Logger](
       } else {
         for {
           searchResult <- handler.handleCommand(BormCommand.Search(args.toList, none[LocalDate]))
-          _            <- reply(searchResult)
+          _ <- reply(
+            escape(searchResult),
+            parseMode = ParseMode.MarkdownV2.some,
+            disableWebPagePreview = true.some
+          )
         } yield ()
       }
     }

@@ -1,15 +1,19 @@
 package com.lambdarat.teleborm.handler
 
-import cats.syntax.all._
-import cats.effect.kernel.Async
 import com.lambdarat.teleborm.bot.BormCommand
+import com.lambdarat.teleborm.client.BormClient
 
-class BormCommandHandler[F[_]: Async] {
+import cats.effect.kernel.Async
+import cats.syntax.all._
+
+class BormCommandHandler[F[_]: Async](bormClient: BormClient[F]) {
+
   def handleCommand(command: BormCommand): F[String] =
     command match {
-      case BormCommand.Search(words, maybeFrom) =>
-        val searchPrefixMessage = s"Buscando ${words.mkString(", ")}"
-        maybeFrom.fold(searchPrefixMessage)(from => s"$searchPrefixMessage desde $from").pure[F]
+      case BormCommand.Search(words, _) =>
+        for {
+          result <- bormClient.search(words)
+        } yield result.pretty
       case _ => "Comando no permitido".pure[F]
     }
 

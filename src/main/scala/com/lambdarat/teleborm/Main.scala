@@ -1,31 +1,36 @@
 package com.lambdarat.teleborm
 
+import com.lambdarat.teleborm.bot.TelebormBot
+import com.lambdarat.teleborm.client.BormClient
+import com.lambdarat.teleborm.config.TelebormConfig
+import com.lambdarat.teleborm.handler.BormCommandHandler
+
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
-import com.lambdarat.teleborm.bot.TelebormBot
-import sttp.client3.asynchttpclient.fs2.AsyncHttpClientFs2Backend
-import pureconfig._
-import pureconfig.module.catseffect.syntax._
-import com.lambdarat.teleborm.config.TelegramConfig
 import cats.effect.kernel.Sync
 import org.typelevel.log4cats.slf4j.Slf4jLogger
+import pureconfig._
+import pureconfig.module.catseffect.syntax._
+import sttp.client3.asynchttpclient.fs2.AsyncHttpClientFs2Backend
 import sttp.client3.logging.slf4j.Slf4jLoggingBackend
-import com.lambdarat.teleborm.handler.BormCommandHandler
 
 object Main extends IOApp {
   def run(args: List[String]): IO[ExitCode] = {
     implicit def unsafeLogger[F[_]: Sync] = Slf4jLogger.getLogger[F]
 
     AsyncHttpClientFs2Backend.resource[IO]().use { client =>
+      val loggingSttpClient = Slf4jLoggingBackend(client)
+
       for {
-        config <- ConfigSource.default.at("telegram").loadF[IO, TelegramConfig]()
+        config <- ConfigSource.default.loadF[IO, TelebormConfig]()
         _      <- unsafeLogger[IO].info("Loaded config, initializing bot...")
-        commandHandler = new BormCommandHandler[IO]
+        bormClient     = new BormClient[IO](loggingSttpClient, config.borm)
+        commandHandler = new BormCommandHandler[IO](bormClient)
         bot = new TelebormBot[IO](
-          Slf4jLoggingBackend(client),
-          config.token,
-          config.webhook,
+          loggingSttpClient,
+          config.telegram.token,
+          config.telegram.webhook,
           commandHandler
         )
         _ <- bot.run()
