@@ -73,7 +73,7 @@ class TelebormBot[F[_]: Async: Logger](
     def onErrorContact: F[Unit] =
       commandAttempt.recoverWith { case _ =>
         replyMdV2(
-          Messages.contact.escape,
+          Messages.contact.escapeMd,
           disableWebPagePreview = true.some
         ).void
       }
@@ -81,7 +81,7 @@ class TelebormBot[F[_]: Async: Logger](
 
   // Greeting/help message
   onCommand("start" | BormCommandType.Help.translation) { implicit msg =>
-    replyMdV2(Messages.greeting.escape).void
+    replyMdV2(Messages.greeting.escapeMd).void
   }
 
   private val illegalCbData = new IllegalArgumentException(
@@ -103,7 +103,7 @@ class TelebormBot[F[_]: Async: Logger](
                 messageId = cb.message.map(_.messageId),
                 parseMode = ParseMode.MarkdownV2.some,
                 disableWebPagePreview = true.some,
-                text = searchResult.pretty.escape,
+                text = searchResult.pretty.escapeMd,
                 replyMarkup = Pagination
                   .prepareSearchButtons(
                     search.words,
@@ -135,7 +135,7 @@ class TelebormBot[F[_]: Async: Logger](
             BormCommand.Search(args.toList, page = 0, none[LocalDate])
           )
           _ <- replyMdV2(
-            searchResult.pretty.escape,
+            searchResult.pretty.escapeMd,
             disableWebPagePreview = true.some,
             replyMarkup = Pagination.prepareSearchButtons(args.toList, 0, searchResult.total).some
           )
@@ -160,7 +160,7 @@ class TelebormBot[F[_]: Async: Logger](
                 BormCommand.Search(word :: words.toList, page = 0, none[LocalDate])
               )
               _ <- replyMdV2(
-                searchResult.escape,
+                searchResult.escapeMd,
                 disableWebPagePreview = true.some
               )
             } yield ()

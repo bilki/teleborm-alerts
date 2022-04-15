@@ -1,5 +1,8 @@
 package com.lambdarat.teleborm.model
 
+import com.lambdarat.teleborm.bot.Messages
+import com.lambdarat.teleborm.bot.Messages._
+
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -14,32 +17,29 @@ final case class SearchRecord(
 ) {
 
   private lazy val bormHtml: String =
-    s"https://www.borm.es/\\#/home/anuncio/${SearchRecord.shortPublishedFormat.format(publishedOn)}/$announceId"
+    s"https://www.borm.es/\\#/home/anuncio/${SearchRecord.shortPublishedDateFormat.format(publishedOn)}/$announceId"
 
   private lazy val bormPdf: String =
     s"https://www.borm.es/services/anuncio/ano/${publishedOn.getYear}/numero/${announceId}/pdf\\?id\\=${pdfId}"
 
+  private lazy val publishedLongDate =
+    SearchRecord.spanishLongDateFormat.format(publishedOn.toLocalDate)
+
   def pretty: String =
-    s"""|${"Publicado".bold}: ${SearchRecord.spanishLongDateFormat.format(publishedOn.toLocalDate)}
-        |${"Anuncio".bold}: $bormHtml
+    s"""|${Messages.published}: ${publishedLongDate}
+        |${Messages.announce}: $bormHtml
         |${"PDF".bold}: $bormPdf
-        |${SearchRecord.extendedMarkdownEscape(summary).italic}
+        |${summary.extendedEscapeMd.italic}
         |""".stripMargin
 
 }
 
 object SearchRecord {
-  val shortPublishedFormat: DateTimeFormatter =
+  val shortPublishedDateFormat: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd-MM-yyyy")
 
   val spanishLongDateFormat: DateTimeFormatter =
     DateTimeFormatter
       .ofPattern("EEEE',' d 'de' MMMM',' yyyy")
       .localizedBy(Locale.forLanguageTag("es-ES"))
-
-  def extendedMarkdownEscape(text: String): String = text
-    .replace("+", "\\+")
-    .replace("(", "\\(")
-    .replace(")", "\\)")
-    .replace("#", "\\#")
 }

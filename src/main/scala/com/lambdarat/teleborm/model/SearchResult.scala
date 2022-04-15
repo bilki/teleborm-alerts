@@ -1,14 +1,13 @@
 package com.lambdarat.teleborm.model
 
-import com.bot4s.telegram.Implicits._
+import com.lambdarat.teleborm.bot.Messages
 
 final case class SearchResult(records: List[SearchRecord], total: Int) {
 
   def pretty: String =
-    s"""${"Resultados encontrados".bold} \\[${total}\\]
-    |
-    |${records.map(_.pretty).mkString("\n")}
-    |
-    |""".stripMargin
+    s"""
+      |${records.map(_.pretty).mkString("\n")}
+      |${Messages.foundSearchResults} \\[${total}\\]
+      |""".stripMargin
 
 }

@@ -3,11 +3,17 @@ package com.lambdarat.teleborm.bot
 import com.bot4s.telegram.Implicits._
 
 object Messages {
-  private[bot] implicit class EscapeMarkdown(text: String) {
-    def escape: String = text
+  implicit class EscapeMarkdown(text: String) {
+    def escapeMd: String = text
       .replace(".", "\\.")
       .replace("|", "\\|")
       .replace("-", "\\-")
+
+    def extendedEscapeMd: String = text
+      .replace("+", "\\+")
+      .replace("(", "\\(")
+      .replace(")", "\\)")
+      .replace("#", "\\#")
   }
 
   val helpCommandDescription = "Recibe de nuevo el mensaje inicial de ayuda"
@@ -41,5 +47,11 @@ object Messages {
 
   val missingArgsForSearchWithDate =
     "La búsqueda no funcionará si no se introduce al menos la fecha y una palabra"
+
+  val foundSearchResults: String = "Resultados encontrados".bold
+
+  // Search record messages
+  val published = "Publicado".bold
+  val announce  = "Anuncio".bold
 
 }
