@@ -1,9 +1,9 @@
 package com.lambdarat.teleborm.config
 
 import org.http4s.Uri
+import pureconfig.ConfigReader
 import pureconfig.generic.semiauto._
 import pureconfig.module.http4s._
-import pureconfig.ConfigReader
 
 case class TelegramConfig(
     webhook: Uri,
