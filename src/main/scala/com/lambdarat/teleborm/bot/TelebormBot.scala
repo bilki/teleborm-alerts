@@ -107,7 +107,7 @@ class TelebormBot[F[_]: Async: Logger](
                 replyMarkup = Pagination
                   .prepareSearchButtons(
                     search.words,
-                    search.page.getOrElse(0),
+                    search.page,
                     searchResult.total
                   )
                   .some
@@ -132,7 +132,7 @@ class TelebormBot[F[_]: Async: Logger](
       } else {
         val attemptCommand = for {
           searchResult <- handler.handleSearch(
-            BormCommand.Search(args.toList, none[Int], none[LocalDate])
+            BormCommand.Search(args.toList, page = 0, none[LocalDate])
           )
           _ <- replyMdV2(
             searchResult.pretty.escape,
@@ -157,7 +157,7 @@ class TelebormBot[F[_]: Async: Logger](
           { _ =>
             val attemptCommand = for {
               searchResult <- handler.handleCommand(
-                BormCommand.Search(word :: words.toList, none[Int], none[LocalDate])
+                BormCommand.Search(word :: words.toList, page = 0, none[LocalDate])
               )
               _ <- replyMdV2(
                 searchResult.escape,

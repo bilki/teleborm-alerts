@@ -16,7 +16,7 @@ class BormCommandSpec extends FunSuite {
     val expected = BormCommand
       .Search(
         words = List("agua", "vivienda"),
-        page = 0.some,
+        page = 0,
         from = none[LocalDate]
       )
       .some

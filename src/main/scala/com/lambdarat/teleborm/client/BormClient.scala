@@ -15,8 +15,8 @@ class BormClient[F[_]: Async](sttp: SttpBackend[F, _], config: BormConfig) {
 
   private val limit = 5
 
-  def search(words: List[String], page: Option[Int]): F[SearchResult] = {
-    val offset = page.getOrElse(0) * limit
+  def search(words: List[String], page: Int): F[SearchResult] = {
+    val offset = page * limit
 
     val uri = config.uri
       .withParams(
