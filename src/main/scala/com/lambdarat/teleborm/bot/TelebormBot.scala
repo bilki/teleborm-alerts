@@ -1,5 +1,7 @@
 package com.lambdarat.teleborm.bot
 
+import com.lambdarat.teleborm.bot.Messages
+import com.lambdarat.teleborm.bot.Messages._
 import com.lambdarat.teleborm.handler.BormCommandHandler
 
 import java.time.LocalDate
@@ -8,7 +10,6 @@ import java.time.format.DateTimeFormatter
 import cats.effect.kernel.Async
 import cats.effect.kernel.Resource
 import cats.syntax.all._
-import com.bot4s.telegram.Implicits._
 import com.bot4s.telegram.api.declarative.Callbacks
 import com.bot4s.telegram.api.declarative.Commands
 import com.bot4s.telegram.cats.TelegramBot
@@ -61,53 +62,26 @@ class TelebormBot[F[_]: Async: Logger](
     .withHttpApp(webhookHandler)
     .build
 
-  // Crude, brutal escape for markdown v2
-  private def escape(text: String): String = text
-    .replace(".", "\\.")
-    .replace("|", "\\|")
-    .replace("-", "\\-")
-
   private val botCommands =
     List(
-      BotCommand("ayuda", "Recibe de nuevo el mensaje inicial de ayuda"),
-      BotCommand(
-        "buscar",
-        "palabra1 palabra2 palabraN - Busca publicaciones que contengan todas las palabras"
-      ),
-      BotCommand(
-        "buscar_desde",
-        "2022-01-01 palabra1 palabra2 palabraN - Busca publicaciones que contengan todas las palabras desde la fecha indicada"
-      )
+      BotCommand(BormCommandType.Help.translation, Messages.helpCommandDescription),
+      BotCommand(BormCommandType.Search.translation, Messages.searchCommandDescription),
+      BotCommand(BormCommandType.SearchWithDate.translation, Messages.searchFromCommandDescription)
     )
 
   private implicit class RecoverFromCommand(commandAttempt: F[Unit])(implicit msg: models.Message) {
     def onErrorContact: F[Unit] =
       commandAttempt.recoverWith { case _ =>
         replyMdV2(
-          s"No se pudo completar la búsqueda, contacta con ${"\\@bilki".altWithUrl("https://twitter.com/bilki")} en Twitter para más información",
+          Messages.contact.escape,
           disableWebPagePreview = true.some
         ).void
       }
   }
 
   // Greeting/help message
-  onCommand("start" | "ayuda") { implicit msg =>
-    val helpMessage =
-      s"""Bienvenido al buscador y notificador de publicaciones del ${"BORM".bold}.
-      |
-      |Este pequeño bot permite buscar por palabras clave, así como establecer
-      |alertas para recibir mensajes con las nuevas publicaciones diarias.
-      |
-      |Puedes utilizar los siguientes comandos:
-      |
-      |/start o /ayuda - Recibe de nuevo este mensaje de ayuda
-      |
-      |/buscar palabra1 palabra2 palabraN - Busca publicaciones que contengan ${"todas".bold} estas palabras
-      |
-      |/buscar\\_desde 2022-01-01 palabra1 palabra2 palabraN - Busca publicaciones que contengan ${"todas".bold} estas palabras desde la fecha indicada
-      """.stripMargin
-
-    replyMdV2(escape(helpMessage)).void
+  onCommand("start" | BormCommandType.Help.translation) { implicit msg =>
+    replyMdV2(Messages.greeting.escape).void
   }
 
   private val illegalCbData = new IllegalArgumentException(
@@ -127,14 +101,16 @@ class TelebormBot[F[_]: Async: Logger](
               EditMessageText(
                 chatId = cb.message.map(_.chat.chatId),
                 messageId = cb.message.map(_.messageId),
-                parseMode = ParseMode.MarkdownV2,
+                parseMode = ParseMode.MarkdownV2.some,
                 disableWebPagePreview = true.some,
-                text = escape(searchResult.pretty),
-                replyMarkup = Pagination.prepareSearchButtons(
-                  search.words,
-                  search.page.getOrElse(0),
-                  searchResult.total
-                )
+                text = searchResult.pretty.escape,
+                replyMarkup = Pagination
+                  .prepareSearchButtons(
+                    search.words,
+                    search.page.getOrElse(0),
+                    searchResult.total
+                  )
+                  .some
               )
             )
           } yield ()
@@ -149,19 +125,19 @@ class TelebormBot[F[_]: Async: Logger](
   }
 
   // Search by words, optionally by date
-  onCommand("buscar") { implicit msg =>
+  onCommand(BormCommandType.Search.translation) { implicit msg =>
     withArgs { args =>
       if (args.isEmpty) {
-        reply("La búsqueda no funcionará si no se introduce al menos una palabra").void
+        reply(Messages.missingArgsForSearch).void
       } else {
         val attemptCommand = for {
           searchResult <- handler.handleSearch(
             BormCommand.Search(args.toList, none[Int], none[LocalDate])
           )
           _ <- replyMdV2(
-            escape(searchResult.pretty),
+            searchResult.pretty.escape,
             disableWebPagePreview = true.some,
-            replyMarkup = Pagination.prepareSearchButtons(args.toList, 0, searchResult.total)
+            replyMarkup = Pagination.prepareSearchButtons(args.toList, 0, searchResult.total).some
           )
         } yield ()
 
@@ -170,21 +146,21 @@ class TelebormBot[F[_]: Async: Logger](
     }
   }
 
-  onCommand("buscar_desde") { implicit msg =>
+  onCommand(BormCommandType.SearchWithDate.translation) { implicit msg =>
     withArgs {
       case Seq(rawDate, word, words @ _*) =>
         val dateOrError =
           Either.catchNonFatal(DateTimeFormatter.ISO_DATE.parse(rawDate, LocalDate.from _))
 
         dateOrError.fold(
-          _ => reply(s"La fecha proporcionada ${rawDate} no es válida").void,
+          _ => reply(Messages.invalidDateForSearch(rawDate)).void,
           { _ =>
             val attemptCommand = for {
               searchResult <- handler.handleCommand(
                 BormCommand.Search(word :: words.toList, none[Int], none[LocalDate])
               )
               _ <- replyMdV2(
-                escape(searchResult),
+                searchResult.escape,
                 disableWebPagePreview = true.some
               )
             } yield ()
@@ -192,8 +168,7 @@ class TelebormBot[F[_]: Async: Logger](
             attemptCommand.onErrorContact
           }
         )
-      case _ =>
-        reply("La búsqueda no funcionará si no se introduce al menos la fecha y una palabra").void
+      case _ => reply(Messages.missingArgsForSearchWithDate).void
     }
   }
 
