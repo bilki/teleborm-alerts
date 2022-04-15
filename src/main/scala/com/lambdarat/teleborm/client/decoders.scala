@@ -21,7 +21,8 @@ object decoders {
           DecodingFailure.fromThrowable(err, List(CursorOp.DownField("Fec_Publicacion")))
         )
       announceId <- json.downField("ID_Anuncio").as[String].map(_.toLong)
-    } yield SearchRecord(summary, publishedOn, announceId)
+      pdfId      <- json.downField("ID_Objeto_Digital_Anuncio").as[String].map(_.toLong)
+    } yield SearchRecord(summary, publishedOn, announceId, pdfId)
   }
 
   implicit val searchResultDecoder: Decoder[SearchResult] = Decoder(

@@ -34,6 +34,10 @@ class DecodersSpec extends FunSuite {
         |                "id": "ID_Anuncio"
         |            },
         |            {
+        |                "type": "numeric",
+        |                "id": "ID_Objeto_Digital_Anuncio"
+        |            },
+        |            {
         |                "type": "int8",
         |                "id": "_full_count"
         |            },
@@ -48,16 +52,17 @@ class DecodersSpec extends FunSuite {
         |        "records": [
         |            {
         |                "_full_count": "9",
-        |                "Fec_Publicacion": "2022-02-09T00:00:00",
-        |                "ID_Anuncio": "535",
+        |                "ID_Objeto_Digital_Anuncio": "799553",
         |                "rank Sumario": 0.0573088,
-        |                "Sumario": "Propuesta de Resolución provisional de concesión de una beca de postgrado en Estadística, a desarrollar en el Centro Regional de Estadística de Murcia, convocada mediante Orden de 7 de julio de 2020, del Consejero de Presidencia y Hacienda."
+        |                "ID_Anuncio": "535",
+        |                "Sumario": "Propuesta de Resolución provisional de concesión de una beca de postgrado en Estadística, a desarrollar en el Centro Regional de Estadística de Murcia, convocada mediante Orden de 7 de julio de 2020, del Consejero de Presidencia y Hacienda.",
+        |                "Fec_Publicacion": "2022-02-09T00:00:00"
         |            }
         |        ],
         |        "limit": 1,
         |        "_links": {
-        |            "start": "/catalogo/api/action/datastore_search?q=%7B+%22Sumario%22%3A+%22beca%22+%7D&fields=Sumario%2CFec_Publicacion%2CID_Anuncio&resource_id=36552a73-2f7a-48a7-9da8-08360c81c29d&limit=1&sort=Fec_Publicacion",
-        |            "next": "/catalogo/api/action/datastore_search?sort=Fec_Publicacion&resource_id=36552a73-2f7a-48a7-9da8-08360c81c29d&fields=Sumario%2CFec_Publicacion%2CID_Anuncio&q=%7B+%22Sumario%22%3A+%22beca%22+%7D&limit=1&offset=1"
+        |            "start": "/catalogo/api/action/datastore_search?q=%7B+%22Sumario%22%3A+%22beca%22+%7D&fields=Sumario%2CFec_Publicacion%2CID_Anuncio%2CID_Objeto_Digital_Anuncio&resource_id=36552a73-2f7a-48a7-9da8-08360c81c29d&limit=1&sort=Fec_Publicacion",
+        |            "next": "/catalogo/api/action/datastore_search?sort=Fec_Publicacion&resource_id=36552a73-2f7a-48a7-9da8-08360c81c29d&fields=Sumario%2CFec_Publicacion%2CID_Anuncio%2CID_Objeto_Digital_Anuncio&q=%7B+%22Sumario%22%3A+%22beca%22+%7D&limit=1&offset=1"
         |        },
         |        "total": 9
         |    }
@@ -71,7 +76,8 @@ class DecodersSpec extends FunSuite {
           summary =
             "Propuesta de Resolución provisional de concesión de una beca de postgrado en Estadística, a desarrollar en el Centro Regional de Estadística de Murcia, convocada mediante Orden de 7 de julio de 2020, del Consejero de Presidencia y Hacienda.",
           publishedOn = LocalDateTime.parse("2022-02-09T00:00:00"),
-          announceId = 535
+          announceId = 535,
+          pdfId = 799553
         )
       )
     )

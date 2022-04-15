@@ -15,6 +15,7 @@ import com.bot4s.telegram.marshalling._
 import com.bot4s.telegram.methods.ParseMode
 import com.bot4s.telegram.methods.SetMyCommands
 import com.bot4s.telegram.methods.SetWebhook
+import com.bot4s.telegram.models
 import com.bot4s.telegram.models.BotCommand
 import com.bot4s.telegram.models.Update
 import com.bot4s.telegram.models.User
@@ -76,6 +77,17 @@ class TelebormBot[F[_]: Async: Logger](
       )
     )
 
+  private implicit class RecoverFromCommand(commandAttempt: F[Unit])(implicit msg: models.Message) {
+    def onErrorContact: F[Unit] =
+      commandAttempt.recoverWith { case _ =>
+        reply(
+          s"No se pudo completar la búsqueda, contacta con ${"\\@bilki".altWithUrl("https://twitter.com/bilki")} en Twitter para más información",
+          parseMode = ParseMode.MarkdownV2.some,
+          disableWebPagePreview = true.some
+        ).void
+      }
+  }
+
   // Greeting/help message
   onCommand("start" | "ayuda") { implicit msg =>
     val helpMessage =
@@ -102,7 +114,7 @@ class TelebormBot[F[_]: Async: Logger](
       if (args.isEmpty) {
         reply("La búsqueda no funcionará si no se introduce al menos una palabra").void
       } else {
-        for {
+        val attemptCommand = for {
           searchResult <- handler.handleCommand(BormCommand.Search(args.toList, none[LocalDate]))
           _ <- reply(
             escape(searchResult),
@@ -110,6 +122,8 @@ class TelebormBot[F[_]: Async: Logger](
             disableWebPagePreview = true.some
           )
         } yield ()
+
+        attemptCommand.onErrorContact
       }
     }
   }
@@ -122,13 +136,16 @@ class TelebormBot[F[_]: Async: Logger](
 
         dateOrError.fold(
           _ => reply(s"La fecha proporcionada ${rawDate} no es válida").void,
-          from =>
-            for {
+          { from =>
+            val attemptCommand = for {
               commandResult <- handler.handleCommand(
                 BormCommand.Search(word :: words.toList, from.some)
               )
               _ <- reply(commandResult)
             } yield ()
+
+            attemptCommand.onErrorContact
+          }
         )
       case _ =>
         reply("La búsqueda no funcionará si no se introduce al menos la fecha y una palabra").void

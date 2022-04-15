@@ -18,7 +18,7 @@ class BormClient[F[_]: Async](sttp: SttpBackend[F, _], config: BormConfig) {
     val uri = config.uri
       .withParams(
         "resource_id" -> config.resourceId.toString,
-        "fields"      -> "Sumario,Fec_Publicacion,ID_Anuncio",
+        "fields"      -> "Sumario,Fec_Publicacion,ID_Anuncio,ID_Objeto_Digital_Anuncio",
         "sort"        -> "Fec_Publicacion",
         "q" -> Json
           .obj(
