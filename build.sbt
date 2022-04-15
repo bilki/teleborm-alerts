@@ -27,6 +27,7 @@ lazy val root = project
       "org.http4s"                    %% "http4s-circe"                  % "0.23.11",
       "org.http4s"                    %% "http4s-ember-server"           % "0.23.11",
       "org.typelevel"                 %% "cats-effect"                   % "3.3.11",
+      "com.beachape"                  %% "enumeratum"                    % "1.7.0",
       "org.typelevel"                 %% "log4cats-core"                 % "2.2.0",
       "org.typelevel"                 %% "log4cats-slf4j"                % "2.2.0",
       "org.scalameta"                 %% "munit"                         % "0.7.29" % Test
