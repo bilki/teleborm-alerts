@@ -22,7 +22,7 @@ class BormClient[F[_]: Async](sttp: SttpBackend[F, _], config: BormConfig) {
       .withParams(
         "resource_id" -> config.resourceId.toString,
         "fields"      -> "Sumario,Fec_Publicacion,ID_Anuncio,ID_Objeto_Digital_Anuncio",
-        "sort"        -> "Fec_Publicacion",
+        "sort"        -> "Fec_Publicacion desc",
         "q" -> Json
           .obj(
             "Sumario" -> Json.fromString(words.mkString(","))
