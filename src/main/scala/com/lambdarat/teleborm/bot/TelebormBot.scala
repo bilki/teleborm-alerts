@@ -8,26 +8,13 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 import cats.effect.kernel.Async
-import cats.effect.kernel.Resource
 import cats.syntax.all._
 import com.bot4s.telegram.api.declarative.Callbacks
 import com.bot4s.telegram.api.declarative.Commands
 import com.bot4s.telegram.cats.TelegramBot
-import com.bot4s.telegram.marshalling._
 import com.bot4s.telegram.methods.EditMessageText
 import com.bot4s.telegram.methods.ParseMode
-import com.bot4s.telegram.methods.SetMyCommands
-import com.bot4s.telegram.methods.SetWebhook
 import com.bot4s.telegram.models
-import com.bot4s.telegram.models.BotCommand
-import com.bot4s.telegram.models.Update
-import com.bot4s.telegram.models.User
-import com.comcast.ip4s._
-import org.http4s._
-import org.http4s.dsl.Http4sDsl
-import org.http4s.ember.server._
-import org.http4s.implicits._
-import org.http4s.server.Server
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.syntax._
 import sttp.client3.SttpBackend
@@ -35,39 +22,10 @@ import sttp.client3.SttpBackend
 class TelebormBot[F[_]: Async: Logger](
     backend: SttpBackend[F, _],
     token: String,
-    webhookUrl: Uri,
     handler: BormCommandHandler[F]
 ) extends TelegramBot[F](token, backend)
     with Commands[F]
     with Callbacks[F] {
-
-  private val dsl = new Http4sDsl[F] {}
-  import dsl._
-
-  val webhookHandler = HttpRoutes
-    .of[F] { case req @ POST -> Root =>
-      for {
-        body     <- req.bodyText.compile.string
-        update   <- Async[F].delay(fromJson[Update](body))
-        _        <- receiveUpdate(update, none[User])
-        response <- Ok()
-      } yield response
-    }
-    .orNotFound
-
-  val webhookServer: Resource[F, Server] = EmberServerBuilder
-    .default[F]
-    .withHost(ipv4"0.0.0.0")
-    .withPort(port"9000")
-    .withHttpApp(webhookHandler)
-    .build
-
-  private val botCommands =
-    List(
-      BotCommand(BormCommandType.Help.translation, Messages.helpCommandDescription),
-      BotCommand(BormCommandType.Search.translation, Messages.searchCommandDescription),
-      BotCommand(BormCommandType.SearchWithDate.translation, Messages.searchFromCommandDescription)
-    )
 
   private implicit class RecoverFromCommand(commandAttempt: F[Unit])(implicit msg: models.Message) {
     def onErrorContact: F[Unit] =
@@ -172,26 +130,6 @@ class TelebormBot[F[_]: Async: Logger](
           }
         )
       case _ => reply(Messages.missingArgsForSearchWithDate).void
-    }
-  }
-
-  override def run(): F[Unit] = {
-    val commandNames = botCommands.map(_.command).mkString("[", ", ", "]")
-
-    val registerWebhook = for {
-      _            <- info"Attempting to register webhook handler at ${webhookUrl.toString}..."
-      isRegistered <- request(SetWebhook(url = webhookUrl.toString))
-      _            <- info"Attempting to set commands ${commandNames}"
-      commandsSet  <- request(SetMyCommands(botCommands))
-    } yield isRegistered && commandsSet
-
-    webhookServer.use { _ =>
-      Async[F].ifM(registerWebhook)(
-        info"Registered webhook handler at ${webhookUrl.toString} with commands ${commandNames}" *> Async[
-          F
-        ].never,
-        Async[F].raiseError(new Exception(s"Could not set webhook URL to ${webhookUrl}"))
-      )
     }
   }
 }

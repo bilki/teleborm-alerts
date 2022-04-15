@@ -1,6 +1,7 @@
 package com.lambdarat.teleborm
 
 import com.lambdarat.teleborm.bot.TelebormBot
+import com.lambdarat.teleborm.bot.TelebormBotInit
 import com.lambdarat.teleborm.client.BormClient
 import com.lambdarat.teleborm.config.TelebormConfig
 import com.lambdarat.teleborm.handler.BormCommandHandler
@@ -30,10 +31,10 @@ object Main extends IOApp {
         bot = new TelebormBot[IO](
           loggingSttpClient,
           config.telegram.token,
-          config.telegram.webhook,
           commandHandler
         )
-        _ <- bot.run()
+        botInitializer = new TelebormBotInit[IO](bot, config.telegram)
+        _ <- botInitializer.setup
       } yield ExitCode.Success
     }
   }
