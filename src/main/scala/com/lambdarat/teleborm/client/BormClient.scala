@@ -13,7 +13,10 @@ import sttp.model.Uri
 
 class BormClient[F[_]: Async](sttp: SttpBackend[F, _], config: BormConfig) {
 
-  def search(words: List[String]): F[SearchResult] = {
+  private val limit = 5
+
+  def search(words: List[String], page: Option[Int]): F[SearchResult] = {
+    val offset = page.getOrElse(0) * limit
 
     val uri = config.uri
       .withParams(
@@ -25,7 +28,8 @@ class BormClient[F[_]: Async](sttp: SttpBackend[F, _], config: BormConfig) {
             "Sumario" -> Json.fromString(words.mkString(","))
           )
           .noSpaces,
-        "limit" -> "5"
+        "limit"  -> limit.toString,
+        "offset" -> offset.toString
       )
       .queryValueSegmentsEncoding(Uri.QuerySegmentEncoding.Standard)
 

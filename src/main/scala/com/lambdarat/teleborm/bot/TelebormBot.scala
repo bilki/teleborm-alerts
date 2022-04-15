@@ -9,9 +9,11 @@ import cats.effect.kernel.Async
 import cats.effect.kernel.Resource
 import cats.syntax.all._
 import com.bot4s.telegram.Implicits._
+import com.bot4s.telegram.api.declarative.Callbacks
 import com.bot4s.telegram.api.declarative.Commands
 import com.bot4s.telegram.cats.TelegramBot
 import com.bot4s.telegram.marshalling._
+import com.bot4s.telegram.methods.EditMessageText
 import com.bot4s.telegram.methods.ParseMode
 import com.bot4s.telegram.methods.SetMyCommands
 import com.bot4s.telegram.methods.SetWebhook
@@ -35,7 +37,8 @@ class TelebormBot[F[_]: Async: Logger](
     webhookUrl: Uri,
     handler: BormCommandHandler[F]
 ) extends TelegramBot[F](token, backend)
-    with Commands[F] {
+    with Commands[F]
+    with Callbacks[F] {
 
   private val dsl = new Http4sDsl[F] {}
   import dsl._
@@ -80,9 +83,8 @@ class TelebormBot[F[_]: Async: Logger](
   private implicit class RecoverFromCommand(commandAttempt: F[Unit])(implicit msg: models.Message) {
     def onErrorContact: F[Unit] =
       commandAttempt.recoverWith { case _ =>
-        reply(
+        replyMdV2(
           s"No se pudo completar la búsqueda, contacta con ${"\\@bilki".altWithUrl("https://twitter.com/bilki")} en Twitter para más información",
-          parseMode = ParseMode.MarkdownV2.some,
           disableWebPagePreview = true.some
         ).void
       }
@@ -98,14 +100,52 @@ class TelebormBot[F[_]: Async: Logger](
       |
       |Puedes utilizar los siguientes comandos:
       |
-      |/start o /ayuda - Recibe de nuevo este mensaje con la ayuda
+      |/start o /ayuda - Recibe de nuevo este mensaje de ayuda
       |
       |/buscar palabra1 palabra2 palabraN - Busca publicaciones que contengan ${"todas".bold} estas palabras
       |
       |/buscar\\_desde 2022-01-01 palabra1 palabra2 palabraN - Busca publicaciones que contengan ${"todas".bold} estas palabras desde la fecha indicada
       """.stripMargin
 
-    reply(escape(helpMessage), parseMode = ParseMode.MarkdownV2.some).void
+    replyMdV2(escape(helpMessage)).void
+  }
+
+  private val illegalCbData = new IllegalArgumentException(
+    "Not supported command or data in callback"
+  )
+
+  onCallbackQuery { implicit cb =>
+    val maybeCommand = BormCommand.extractFrom(cb.data)
+
+    val attemptCommand = for {
+      command <- Async[F].fromOption(maybeCommand, illegalCbData)
+      _ <- command match {
+        case search: BormCommand.Search =>
+          for {
+            searchResult <- handler.handleSearch(search)
+            _ <- request(
+              EditMessageText(
+                chatId = cb.message.map(_.chat.chatId),
+                messageId = cb.message.map(_.messageId),
+                parseMode = ParseMode.MarkdownV2,
+                disableWebPagePreview = true.some,
+                text = escape(searchResult.pretty),
+                replyMarkup = Pagination.prepareSearchButtons(
+                  search.words,
+                  search.page.getOrElse(0),
+                  searchResult.total
+                )
+              )
+            )
+          } yield ()
+        case _ =>
+          Async[F].raiseError(new IllegalArgumentException("Callback command not supported yet"))
+      }
+    } yield ()
+
+    attemptCommand.handleErrorWith { case err =>
+      error"Error while handling callback ${err.getMessage}" *> ackCallback().void
+    }
   }
 
   // Search by words, optionally by date
@@ -115,11 +155,13 @@ class TelebormBot[F[_]: Async: Logger](
         reply("La búsqueda no funcionará si no se introduce al menos una palabra").void
       } else {
         val attemptCommand = for {
-          searchResult <- handler.handleCommand(BormCommand.Search(args.toList, none[LocalDate]))
-          _ <- reply(
-            escape(searchResult),
-            parseMode = ParseMode.MarkdownV2.some,
-            disableWebPagePreview = true.some
+          searchResult <- handler.handleSearch(
+            BormCommand.Search(args.toList, none[Int], none[LocalDate])
+          )
+          _ <- replyMdV2(
+            escape(searchResult.pretty),
+            disableWebPagePreview = true.some,
+            replyMarkup = Pagination.prepareSearchButtons(args.toList, 1, searchResult.total)
           )
         } yield ()
 
@@ -136,12 +178,15 @@ class TelebormBot[F[_]: Async: Logger](
 
         dateOrError.fold(
           _ => reply(s"La fecha proporcionada ${rawDate} no es válida").void,
-          { from =>
+          { _ =>
             val attemptCommand = for {
-              commandResult <- handler.handleCommand(
-                BormCommand.Search(word :: words.toList, from.some)
+              searchResult <- handler.handleCommand(
+                BormCommand.Search(word :: words.toList, none[Int], none[LocalDate])
               )
-              _ <- reply(commandResult)
+              _ <- replyMdV2(
+                escape(searchResult),
+                disableWebPagePreview = true.some
+              )
             } yield ()
 
             attemptCommand.onErrorContact
