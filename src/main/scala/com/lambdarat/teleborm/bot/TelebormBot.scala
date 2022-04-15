@@ -161,7 +161,7 @@ class TelebormBot[F[_]: Async: Logger](
           _ <- replyMdV2(
             escape(searchResult.pretty),
             disableWebPagePreview = true.some,
-            replyMarkup = Pagination.prepareSearchButtons(args.toList, 1, searchResult.total)
+            replyMarkup = Pagination.prepareSearchButtons(args.toList, 0, searchResult.total)
           )
         } yield ()
 
