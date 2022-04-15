@@ -79,7 +79,8 @@ class DecodersSpec extends FunSuite {
           announceId = 535,
           pdfId = 799553
         )
-      )
+      ),
+      total = 9
     )
 
     val decoderResult = parse(sampleResponse).flatMap(_.as[SearchResult])

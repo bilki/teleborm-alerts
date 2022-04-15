@@ -25,8 +25,11 @@ object decoders {
     } yield SearchRecord(summary, publishedOn, announceId, pdfId)
   }
 
-  implicit val searchResultDecoder: Decoder[SearchResult] = Decoder(
-    _.downField("result").downField("records").as[List[SearchRecord]].map(SearchResult)
-  )
+  implicit val searchResultDecoder: Decoder[SearchResult] = Decoder { json =>
+    for {
+      records <- json.downField("result").downField("records").as[List[SearchRecord]]
+      total   <- json.downField("result").get[Option[Int]]("total")
+    } yield SearchResult(records, total.getOrElse(0))
+  }
 
 }
