@@ -9,7 +9,8 @@ import sttp.model.Uri
 
 final case class BormConfig(
     uri: Uri,
-    resourceId: UUID
+    resourceId: UUID,
+    limit: Int
 )
 
 object BormConfig {

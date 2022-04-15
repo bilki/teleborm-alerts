@@ -108,7 +108,8 @@ class TelebormBot[F[_]: Async: Logger](
                   .prepareSearchButtons(
                     search.words,
                     search.page,
-                    searchResult.total
+                    searchResult.total,
+                    limit = 5
                   )
                   .some
               )
@@ -137,7 +138,9 @@ class TelebormBot[F[_]: Async: Logger](
           _ <- replyMdV2(
             searchResult.pretty.escapeMd,
             disableWebPagePreview = true.some,
-            replyMarkup = Pagination.prepareSearchButtons(args.toList, 0, searchResult.total).some
+            replyMarkup = Pagination
+              .prepareSearchButtons(args.toList, currentPage = 0, searchResult.total, limit = 5)
+              .some
           )
         } yield ()
 

@@ -9,7 +9,7 @@ object Pagination {
       words: List[String],
       currentPage: Int,
       total: Int,
-      limit: Int = 5
+      limit: Int
   ): InlineKeyboardMarkup = {
     val numPages  = Math.ceil(total.toDouble / limit.toDouble)
     val lastPage  = numPages.toInt - 1
