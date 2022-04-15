@@ -87,4 +87,61 @@ class DecodersSpec extends FunSuite {
 
     assertEquals(decoderResult, expected.asRight[DecodingFailure])
   }
+
+  private val noRecordsResponse: String =
+    s"""|{
+        |    "help": "https://datosabiertos.regiondemurcia.es/catalogo/api/3/action/help_show?name=datastore_search",
+        |    "success": true,
+        |    "result": {
+        |        "sort": "Fec_Publicacion",
+        |        "resource_id": "36552a73-2f7a-48a7-9da8-08360c81c29d",
+        |        "fields": [
+        |            {
+        |                "type": "text",
+        |                "id": "Sumario"
+        |            },
+        |            {
+        |                "type": "timestamp",
+        |                "id": "Fec_Publicacion"
+        |            },
+        |            {
+        |                "type": "numeric",
+        |                "id": "ID_Anuncio"
+        |            },
+        |            {
+        |                "type": "numeric",
+        |                "id": "ID_Objeto_Digital_Anuncio"
+        |            },
+        |            {
+        |                "type": "int8",
+        |                "id": "_full_count"
+        |            },
+        |            {
+        |                "type": "float4",
+        |                "id": "rank Sumario"
+        |            }
+        |        ],
+        |        "q": {
+        |            "Sumario": "beca"
+        |        },
+        |        "records": [],
+        |        "limit": 1,
+        |        "_links": {
+        |            "start": "/catalogo/api/action/datastore_search?q=%7B+%22Sumario%22%3A+%22beca%22+%7D&fields=Sumario%2CFec_Publicacion%2CID_Anuncio%2CID_Objeto_Digital_Anuncio&resource_id=36552a73-2f7a-48a7-9da8-08360c81c29d&limit=1&sort=Fec_Publicacion",
+        |            "next": "/catalogo/api/action/datastore_search?sort=Fec_Publicacion&resource_id=36552a73-2f7a-48a7-9da8-08360c81c29d&fields=Sumario%2CFec_Publicacion%2CID_Anuncio%2CID_Objeto_Digital_Anuncio&q=%7B+%22Sumario%22%3A+%22beca%22+%7D&limit=1&offset=1"
+        |        }
+        |    }
+        |}
+        |""".stripMargin
+
+  test("Decoders should work with no records and return a default total of 0") {
+    val expected = SearchResult(
+      records = List.empty,
+      total = 0
+    )
+
+    val decoderResult = parse(noRecordsResponse).flatMap(_.as[SearchResult])
+
+    assertEquals(decoderResult, expected.asRight[DecodingFailure])
+  }
 }
