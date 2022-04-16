@@ -14,6 +14,9 @@ import com.bot4s.telegram.models.BotCommand
 import com.bot4s.telegram.models.Update
 import com.bot4s.telegram.models.User
 import com.comcast.ip4s._
+import com.scalawilliam.letsencrypt.LetsEncryptScala
+import fs2.io.net.Network
+import fs2.io.net.tls.TLSParameters
 import org.http4s._
 import org.http4s.dsl.Http4sDsl
 import org.http4s.ember.server._
@@ -45,12 +48,19 @@ class TelebormBotInit[F[_]: Async: Logger](bot: BotBase[F], config: TelegramConf
     }
     .orNotFound
 
-  val webhookServer: Resource[F, Server] = EmberServerBuilder
+  val webhookServer: EmberServerBuilder[F] = EmberServerBuilder
     .default[F]
     .withHost(ipv4"0.0.0.0")
-    .withPort(port"9000")
+    .withPort(port"8443")
     .withHttpApp(webhookHandler)
-    .build
+
+  val secureServer: Resource[F, Server] =
+    for {
+      letsEncrypt <- LetsEncryptScala.fromEnvironment[F]
+      sslContext  <- letsEncrypt.sslContextResource[F]
+      tlsContext = Network[F].tlsContext.fromSSLContext(sslContext)
+      server <- webhookServer.withTLS(tlsContext, TLSParameters.Default).build
+    } yield server
 
   def setup: F[Unit] = {
     val commandNames = botCommands.map(_.command).mkString("[", ", ", "]")
@@ -66,7 +76,7 @@ class TelebormBotInit[F[_]: Async: Logger](bot: BotBase[F], config: TelegramConf
     val logRegisterSuccess =
       info"Registered webhook handler at ${webhookUrl.toString} with commands ${commandNames}"
 
-    webhookServer.use { _ =>
+    secureServer.use { _ =>
       Async[F].ifM(registerWebhook)(
         logRegisterSuccess *> Async[F].never,
         Async[F].raiseError(new Exception(s"Could not set webhook URL to ${webhookUrl}"))

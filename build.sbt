@@ -2,6 +2,14 @@ ThisBuild / scalaVersion                              := "2.13.8"
 ThisBuild / semanticdbEnabled                         := true
 ThisBuild / semanticdbVersion                         := scalafixSemanticdb.revision
 ThisBuild / scalafixDependencies += "com.nequissimus" %% "sort-imports" % "0.6.1"
+ThisBuild / assemblyMergeStrategy := {
+  case "META-INF/io.netty.versions.properties" => MergeStrategy.first
+  case x =>
+    val oldStrategy = (ThisBuild / assemblyMergeStrategy).value
+    oldStrategy(x)
+}
+
+resolvers += Resolver.sonatypeRepo("snapshots")
 
 lazy val root = project
   .in(file("."))
@@ -11,6 +19,7 @@ lazy val root = project
     organization := "com.lambdarat",
     version      := "0.1.0",
     scalacOptions ++= Seq("-Wunused", "-deprecation"),
+    assembly / assemblyJarName := "teleborm-alerts.jar",
     libraryDependencies ++= Seq(
       "ch.qos.logback"                 % "logback-classic"               % "1.2.10",
       "com.bot4s"                     %% "telegram-core"                 % "5.4.1",
@@ -29,6 +38,7 @@ lazy val root = project
       "org.typelevel"                 %% "cats-effect"                   % "3.3.11",
       "com.beachape"                  %% "enumeratum"                    % "1.7.0",
       "org.typelevel"                 %% "log4cats-core"                 % "2.2.0",
+      "com.scalawilliam"              %% "letsencrypt-scala"             % "0.0.6-SNAPSHOT",
       "org.typelevel"                 %% "log4cats-slf4j"                % "2.2.0",
       "org.scalameta"                 %% "munit"                         % "0.7.29" % Test
     )
