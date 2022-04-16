@@ -3,6 +3,7 @@ package com.lambdarat.teleborm.bot
 import com.lambdarat.teleborm.bot.Messages
 import com.lambdarat.teleborm.bot.Messages._
 import com.lambdarat.teleborm.handler.BormCommandHandler
+import com.lambdarat.teleborm.model.SearchCommandResult
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -46,6 +47,18 @@ class TelebormBot[F[_]: Async: Logger](
     "Not supported command or data in callback"
   )
 
+  private val commandNotSupported = new IllegalArgumentException(
+    "Callback command not supported yet"
+  )
+
+  private def runSearch[R](
+      command: BormCommand.Search
+  )(action: SearchCommandResult => F[R]): F[R] =
+    for {
+      commandResult <- commandHandler.handle(command)
+      actionResult  <- action(commandResult)
+    } yield actionResult
+
   onCallbackQuery { implicit cb =>
     val maybeCommand = BormCommand.extractFrom(cb.data)
 
@@ -53,21 +66,19 @@ class TelebormBot[F[_]: Async: Logger](
       command <- Async[F].fromOption(maybeCommand, illegalCbData)
       _ <- command match {
         case search: BormCommand.Search =>
-          for {
-            commandResult <- commandHandler.handle(search)
-            _ <- request(
-              EditMessageText(
-                chatId = cb.message.map(_.chat.chatId),
-                messageId = cb.message.map(_.messageId),
-                parseMode = ParseMode.MarkdownV2.some,
-                disableWebPagePreview = true.some,
-                text = commandResult.searchResult.pretty.escapeMd,
-                replyMarkup = commandResult.pagination.some
-              )
+          runSearch(search) { commandResult =>
+            val editMessage = EditMessageText(
+              chatId = cb.message.map(_.chat.chatId),
+              messageId = cb.message.map(_.messageId),
+              parseMode = ParseMode.MarkdownV2.some,
+              disableWebPagePreview = true.some,
+              text = commandResult.searchResult.pretty.escapeMd,
+              replyMarkup = commandResult.pagination.some
             )
-          } yield ()
-        case _ =>
-          Async[F].raiseError(new IllegalArgumentException("Callback command not supported yet"))
+
+            request(editMessage)
+          }.void
+        case _ => Async[F].raiseError(commandNotSupported)
       }
     } yield ()
 
@@ -82,18 +93,17 @@ class TelebormBot[F[_]: Async: Logger](
       if (args.isEmpty) {
         reply(Messages.missingArgsForSearch).void
       } else {
-        val attemptCommand = for {
-          commandResult <- commandHandler.handle(
-            BormCommand.Search(args.toList, page = 0, none[LocalDate])
-          )
-          _ <- replyMdV2(
+        val search = BormCommand.Search(args.toList, page = 0, none[LocalDate])
+
+        val attemptCommand = runSearch(search) { commandResult =>
+          replyMdV2(
             commandResult.searchResult.pretty.escapeMd,
             disableWebPagePreview = true.some,
             replyMarkup = commandResult.pagination.some
           )
-        } yield ()
+        }
 
-        attemptCommand.onErrorContact
+        attemptCommand.void.onErrorContact
       }
     }
   }
