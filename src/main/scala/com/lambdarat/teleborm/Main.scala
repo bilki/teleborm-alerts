@@ -34,7 +34,7 @@ object Main extends IOApp {
           commandHandler
         )
         botInitializer = new TelebormBotInit[IO](bot, config.telegram)
-        _ <- botInitializer.setup
+        _ <- botInitializer.setup(args)
       } yield ExitCode.Success
     }
   }
