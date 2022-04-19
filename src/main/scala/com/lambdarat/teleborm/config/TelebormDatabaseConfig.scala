@@ -4,7 +4,9 @@ import pureconfig.ConfigReader
 import pureconfig.generic.semiauto._
 
 final case class TelebormDatabaseConfig(
-    jdbcConnectionString: String,
+    url: String,
+    user: String,
+    password: String,
     mode: DatabaseMode
 )
 

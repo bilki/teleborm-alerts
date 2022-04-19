@@ -7,14 +7,14 @@ import enumeratum.EnumEntry.Lowercase
 import pureconfig.ConfigReader
 import pureconfig.error.CannotConvert
 
-sealed abstract class DatabaseMode extends EnumEntry with Lowercase
+sealed trait DatabaseMode extends EnumEntry with Lowercase
 
 object DatabaseMode extends Enum[DatabaseMode] {
   val values = findValues
 
-  object Memory      extends DatabaseMode
-  object Integration extends DatabaseMode
-  object Production  extends DatabaseMode
+  case object Memory      extends DatabaseMode
+  case object Integration extends DatabaseMode
+  case object Production  extends DatabaseMode
 
   implicit val databaseModeConfigReader: ConfigReader[DatabaseMode] =
     ConfigReader.stringConfigReader.emap(rawMode =>
