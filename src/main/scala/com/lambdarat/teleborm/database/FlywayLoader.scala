@@ -1,21 +1,22 @@
 package com.lambdarat.teleborm.database
 
-import com.lambdarat.teleborm.config.TelebormDatabaseConfig
+import javax.sql.DataSource
 
 import cats.effect.kernel.Async
 import cats.syntax.all._
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.MigrationVersion
+import org.flywaydb.core.api.output.MigrateResult
 
-class FlywayLoader[F[_]: Async](config: TelebormDatabaseConfig) {
-  def load: F[Unit] =
+class FlywayLoader[F[_]: Async](dataSource: DataSource) {
+  def load: F[MigrateResult] =
     for {
       flyway <- Async[F].delay(
         Flyway.configure
-          .dataSource(config.url, config.user, config.password)
+          .dataSource(dataSource)
           .target(MigrationVersion.LATEST)
           .load
       )
-      _ <- Async[F].delay(flyway.migrate)
-    } yield ()
+      result <- Async[F].delay(flyway.migrate)
+    } yield result
 }

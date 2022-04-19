@@ -28,6 +28,7 @@ lazy val root = project
       "com.bot4s"                     %% "telegram-core"                 % "5.4.1",
       "com.bot4s"                     %% "telegram-akka"                 % "5.4.1",
       "com.oracle.database.jdbc"       % "ojdbc11"                       % "21.5.0.0",
+      "com.oracle.database.jdbc"       % "ucp"                           % "21.5.0.0",
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % "3.5.2",
       "com.softwaremill.sttp.client3" %% "slf4j-backend"                 % "3.5.2",
       "com.softwaremill.sttp.client3" %% "circe"                         % "3.5.2",
