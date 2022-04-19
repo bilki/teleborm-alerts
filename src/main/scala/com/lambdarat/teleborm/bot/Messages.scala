@@ -45,6 +45,9 @@ object Messages {
   def invalidDateForSearch(rawDate: String): String =
     s"La fecha proporcionada ${rawDate} no es válida"
 
+  val askForWordsSearch: String =
+    s"De acuerdo, introduce varias palabras ${"separadas por espacios".bold} para buscar anuncios que las contengan todas"
+
   val missingArgsForSearchWithDate =
     "La búsqueda no funcionará si no se introduce al menos la fecha y una palabra"
 

@@ -6,6 +6,7 @@ import com.lambdarat.teleborm.client.BormClient
 import com.lambdarat.teleborm.config.TelebormConfig
 import com.lambdarat.teleborm.database.DataSourceHelpers
 import com.lambdarat.teleborm.database.FlywayLoader
+import com.lambdarat.teleborm.database.UserStateStorage
 import com.lambdarat.teleborm.handler.BormCommandHandler
 
 import scala.concurrent.ExecutionContext
@@ -14,6 +15,7 @@ import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
 import cats.effect.kernel.Resource
+import doobie._
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import pureconfig._
@@ -32,14 +34,17 @@ object Main extends IOApp {
       loggingSttpClient = Slf4jLoggingBackend(client)
       config <- Resource.eval(ConfigSource.default.loadF[IO, TelebormConfig]())
       _      <- Resource.eval(logger.info("Loaded config, initializing bot..."))
-      bormClient     = new BormClient[IO](loggingSttpClient, config.borm)
-      commandHandler = new BormCommandHandler[IO](bormClient, config.borm)
+      bormClient = new BormClient[IO](loggingSttpClient, config.borm)
       datasource <- DataSourceHelpers.createDataSource[IO](config.database)
-      flywayLoader = new FlywayLoader[IO](datasource)
+      flywayLoader     = new FlywayLoader[IO](datasource)
+      transactor       = Transactor.fromDataSource[IO](datasource, ec)
+      userStateStorage = new UserStateStorage[IO](transactor)
+      commandHandler   = new BormCommandHandler[IO](bormClient, config.borm)
       bot = new TelebormBot[IO](
         loggingSttpClient,
         config.telegram.token,
-        commandHandler
+        commandHandler,
+        userStateStorage
       )
       botInitializer = new TelebormBotInit[IO](bot, config.telegram)
       _ <- Resource.eval(flywayLoader.load)

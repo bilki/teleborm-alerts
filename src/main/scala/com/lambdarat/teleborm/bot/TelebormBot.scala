@@ -2,10 +2,15 @@ package com.lambdarat.teleborm.bot
 
 import com.lambdarat.teleborm.bot.Messages
 import com.lambdarat.teleborm.bot.Messages._
+import com.lambdarat.teleborm.database.ConversationState
+import com.lambdarat.teleborm.database.UserState
+import com.lambdarat.teleborm.database.UserStateStorage
 import com.lambdarat.teleborm.handler.BormCommandHandler
 import com.lambdarat.teleborm.model.SearchCommandResult
 
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 import cats.effect.kernel.Async
@@ -16,6 +21,7 @@ import com.bot4s.telegram.cats.TelegramBot
 import com.bot4s.telegram.methods.EditMessageText
 import com.bot4s.telegram.methods.ParseMode
 import com.bot4s.telegram.models
+import com.bot4s.telegram.models.ForceReply
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.syntax._
 import sttp.client3.SttpBackend
@@ -23,7 +29,8 @@ import sttp.client3.SttpBackend
 class TelebormBot[F[_]: Async: Logger](
     backend: SttpBackend[F, _],
     token: String,
-    commandHandler: BormCommandHandler[F]
+    commandHandler: BormCommandHandler[F],
+    userStateStorage: UserStateStorage[F]
 ) extends TelegramBot[F](token, backend)
     with Commands[F]
     with Callbacks[F] {
@@ -87,25 +94,22 @@ class TelebormBot[F[_]: Async: Logger](
     }
   }
 
-  // Search by words, optionally by date
   onCommand(BormCommandType.Search.translation) { implicit msg =>
-    withArgs { args =>
-      if (args.isEmpty) {
-        reply(Messages.missingArgsForSearch).void
-      } else {
-        val search = BormCommand.Search(args.toList, page = 0, none[LocalDate])
-
-        val attemptCommand = runSearch(search) { commandResult =>
-          replyMdV2(
-            commandResult.searchResult.pretty.escapeMd,
-            disableWebPagePreview = true.some,
-            replyMarkup = commandResult.pagination.some
-          )
-        }
-
-        attemptCommand.void.onErrorContact
-      }
-    }
+    for {
+      now <- Async[F].delay(LocalDateTime.now(ZoneId.of("UTC")))
+      maybeUserState = msg.from.map(user =>
+        UserState(user.id, msg.messageId, ConversationState.AskingSearchWords, now)
+      )
+      userState <- Async[F].fromOption(
+        maybeUserState,
+        new IllegalArgumentException("Failed to extract user id from message")
+      )
+      _ <- userStateStorage.saveUserState(userState)
+      _ <- replyMdV2(
+        Messages.askForWordsSearch,
+        replyMarkup = ForceReply(forceReply = false).some
+      )
+    } yield ()
   }
 
   onCommand(BormCommandType.SearchWithDate.translation) { implicit msg =>
