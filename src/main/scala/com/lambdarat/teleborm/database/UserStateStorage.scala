@@ -29,7 +29,7 @@ class UserStateStorage[F[_]: Async: Logger](xa: Transactor[F]) {
       update user_state
       set message_id = ${userState.messageId}, conv_state = ${userState.convState}, created = ${userState.created}
       where user_id = ${userState.userId}
-    """".update
+    """.update
 
     // Crude upsert
     insert.run

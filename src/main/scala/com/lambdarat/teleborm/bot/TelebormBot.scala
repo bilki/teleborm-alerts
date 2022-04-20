@@ -15,13 +15,11 @@ import java.time.format.DateTimeFormatter
 
 import cats.effect.kernel.Async
 import cats.syntax.all._
-import com.bot4s.telegram.api.declarative.Callbacks
-import com.bot4s.telegram.api.declarative.Commands
+import com.bot4s.telegram.api.declarative._
 import com.bot4s.telegram.cats.TelegramBot
 import com.bot4s.telegram.methods.EditMessageText
 import com.bot4s.telegram.methods.ParseMode
 import com.bot4s.telegram.models
-import com.bot4s.telegram.models.ForceReply
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.syntax._
 import sttp.client3.SttpBackend
@@ -96,21 +94,18 @@ class TelebormBot[F[_]: Async: Logger](
 
   onCommand(BormCommandType.Search.translation) { implicit msg =>
     for {
-      now <- Async[F].delay(LocalDateTime.now(ZoneId.of("UTC")))
+      now          <- Async[F].delay(LocalDateTime.now(ZoneId.of("UTC")))
+      replyMessage <- replyMdV2(Messages.askForWordsSearch)
       maybeUserState = msg.from.map(user =>
-        UserState(user.id, msg.messageId, ConversationState.AskingSearchWords, now)
+        UserState(user.id, replyMessage.messageId, ConversationState.AskingSearchWords, now)
       )
       userState <- Async[F].fromOption(
         maybeUserState,
         new IllegalArgumentException("Failed to extract user id from message")
       )
-      _ <- userStateStorage.saveUserState(userState)
       _ <-
         info"Processing message ${msg.messageId}, storing state ${userState.convState} for user ${userState.userId}"
-      _ <- replyMdV2(
-        Messages.askForWordsSearch,
-        replyMarkup = ForceReply(forceReply = false).some
-      )
+      _ <- userStateStorage.saveUserState(userState)
     } yield ()
   }
 
@@ -138,5 +133,54 @@ class TelebormBot[F[_]: Async: Logger](
         )
       case _ => reply(Messages.missingArgsForSearchWithDate).void
     }
+  }
+
+  private val isNotCommand: Filter[(models.Message, Option[models.User])] = { case (msg, _) =>
+    !msg.text.exists(rawText => BormCommandType.values.map(_.translation).exists(rawText.contains))
+  }
+
+  when(onExtMessage, isNotCommand) { case (msg, _) =>
+    implicit val m = msg
+
+    val attempt = for {
+      now <- Async[F].delay(LocalDateTime.now(ZoneId.of("UTC")))
+      maybeUserId = msg.from.map(_.id)
+      userId <- Async[F].fromOption(
+        maybeUserId,
+        new IllegalArgumentException("Failed to extract user id from message")
+      )
+      maybeUserState <- userStateStorage.getUserState(userId)
+      isResponseToSearchWords = maybeUserState.exists(
+        _.convState == ConversationState.AskingSearchWords
+      )
+      _ <- info"Processing reply for user ${userId} isResponseToSearch: ${isResponseToSearchWords}"
+      _ <- Async[F].whenA(isResponseToSearchWords) {
+        val maybeWords = msg.text.map(_.split(" "))
+
+        Async[F].ifM(maybeWords.exists(_.size > 0).pure[F])(
+          {
+            for {
+              words <- Async[F].fromOption(
+                maybeWords,
+                new IllegalArgumentException("Unable to extract words from message")
+              )
+              search = BormCommand.Search(words.toList, page = 0, none[LocalDate])
+              _ <- runSearch(search) { commandResult =>
+                replyMdV2(
+                  commandResult.searchResult.pretty.escapeMd,
+                  disableWebPagePreview = true.some,
+                  replyMarkup = commandResult.pagination.some
+                )
+              }
+              userState = UserState(userId, msg.messageId, ConversationState.Init, now)
+              _ <- userStateStorage.saveUserState(userState)
+            } yield ()
+          },
+          replyMdV2(Messages.missingArgsForSearch).void
+        )
+      }
+    } yield ()
+
+    attempt.onErrorContact
   }
 }

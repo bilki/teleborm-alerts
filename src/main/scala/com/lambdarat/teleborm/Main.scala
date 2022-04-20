@@ -21,8 +21,8 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 import pureconfig._
 import pureconfig.module.catseffect.syntax._
 import sttp.client3.asynchttpclient.fs2.AsyncHttpClientFs2Backend
-import sttp.client3.logging.slf4j.Slf4jLoggingBackend
 import sttp.client3.logging.LogLevel
+import sttp.client3.logging.slf4j.Slf4jLoggingBackend
 
 object Main extends IOApp {
   implicit val ec = ExecutionContext.global
