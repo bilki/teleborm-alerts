@@ -22,6 +22,7 @@ import pureconfig._
 import pureconfig.module.catseffect.syntax._
 import sttp.client3.asynchttpclient.fs2.AsyncHttpClientFs2Backend
 import sttp.client3.logging.slf4j.Slf4jLoggingBackend
+import sttp.client3.logging.LogLevel
 
 object Main extends IOApp {
   implicit val ec = ExecutionContext.global
@@ -31,7 +32,12 @@ object Main extends IOApp {
       implicit0(logger: Logger[IO]) <- Resource.eval(Slf4jLogger.create[IO])
       _      <- Resource.eval(logger.info("Created logger, attempting to create client..."))
       client <- AsyncHttpClientFs2Backend.resource[IO]()
-      loggingSttpClient = Slf4jLoggingBackend(client)
+      loggingSttpClient = Slf4jLoggingBackend(
+        client,
+        logRequestHeaders = false,
+        logResponseHeaders = false,
+        beforeRequestSendLogLevel = LogLevel.Trace
+      )
       config <- Resource.eval(ConfigSource.default.loadF[IO, TelebormConfig]())
       _      <- Resource.eval(logger.info("Loaded config, initializing bot..."))
       bormClient = new BormClient[IO](loggingSttpClient, config.borm)

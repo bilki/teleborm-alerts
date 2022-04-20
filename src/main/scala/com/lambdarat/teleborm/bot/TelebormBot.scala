@@ -105,6 +105,8 @@ class TelebormBot[F[_]: Async: Logger](
         new IllegalArgumentException("Failed to extract user id from message")
       )
       _ <- userStateStorage.saveUserState(userState)
+      _ <-
+        info"Processing message ${msg.messageId}, storing state ${userState.convState} for user ${userState.userId}"
       _ <- replyMdV2(
         Messages.askForWordsSearch,
         replyMarkup = ForceReply(forceReply = false).some
