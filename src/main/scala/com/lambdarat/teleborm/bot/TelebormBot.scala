@@ -2,6 +2,14 @@ package com.lambdarat.teleborm.bot
 
 import com.lambdarat.teleborm.bot.Messages
 import com.lambdarat.teleborm.bot.Messages._
+import com.lambdarat.teleborm.calendar.CalendarAction.Ignore
+import com.lambdarat.teleborm.calendar.CalendarAction.NextYears
+import com.lambdarat.teleborm.calendar.CalendarAction.PrevYears
+import com.lambdarat.teleborm.calendar.CalendarAction.SetDay
+import com.lambdarat.teleborm.calendar.CalendarAction.SetMonth
+import com.lambdarat.teleborm.calendar.CalendarAction.SetYear
+import com.lambdarat.teleborm.calendar.CalendarAction.Start
+import com.lambdarat.teleborm.calendar.DialogCalendar
 import com.lambdarat.teleborm.database.ConversationState
 import com.lambdarat.teleborm.database.UserState
 import com.lambdarat.teleborm.database.UserStateStorage
@@ -11,14 +19,12 @@ import com.lambdarat.teleborm.model.SearchCommandResult
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 import cats.effect.kernel.Async
 import cats.syntax.all._
 import com.bot4s.telegram.api.declarative._
 import com.bot4s.telegram.cats.TelegramBot
-import com.bot4s.telegram.methods.EditMessageText
-import com.bot4s.telegram.methods.ParseMode
+import com.bot4s.telegram.methods.EditMessageReplyMarkup
 import com.bot4s.telegram.models
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.syntax._
@@ -48,11 +54,11 @@ class TelebormBot[F[_]: Async: Logger](
     replyMdV2(Messages.greeting.escapeMd).void
   }
 
-  private val illegalCbData = new IllegalArgumentException(
+  new IllegalArgumentException(
     "Not supported command or data in callback"
   )
 
-  private val commandNotSupported = new IllegalArgumentException(
+  new IllegalArgumentException(
     "Callback command not supported yet"
   )
 
@@ -64,33 +70,115 @@ class TelebormBot[F[_]: Async: Logger](
       actionResult  <- action(commandResult)
     } yield actionResult
 
-  onCallbackQuery { implicit cb =>
-    val maybeCommand = BormCommand.extractFrom(cb.data)
+  onCallbackWithTag(DialogCalendar.tag) { implicit cb =>
+    implicit val m = cb.message.get
 
-    val attemptCommand = for {
-      command <- Async[F].fromOption(maybeCommand, illegalCbData)
-      _ <- command match {
-        case search: BormCommand.Search =>
-          runSearch(search) { commandResult =>
-            val editMessage = EditMessageText(
+    val attemptCalendar = for {
+      data <- Async[F].fromOption(
+        cb.data,
+        new IllegalArgumentException("Invalid data in callback query")
+      )
+      cbData <- Async[F].fromOption(
+        DialogCalendar.calendarCallbackDataFrom(data),
+        new IllegalArgumentException("Unable to extract valid calendar callback data")
+      )
+      _ <- cbData.action match {
+        case Ignore => unit
+        case SetYear =>
+          request(
+            EditMessageReplyMarkup(
               chatId = cb.message.map(_.chat.chatId),
               messageId = cb.message.map(_.messageId),
-              parseMode = ParseMode.MarkdownV2.some,
-              disableWebPagePreview = true.some,
-              text = commandResult.searchResult.pretty.escapeMd,
-              replyMarkup = commandResult.pagination.some
+              replyMarkup = DialogCalendar.getMonthMarkup(cbData.year.get).some
             )
-
-            request(editMessage)
-          }.void
-        case _ => Async[F].raiseError(commandNotSupported)
+          )
+        case PrevYears =>
+          val newYear = cbData.year.get - 5
+          request(
+            EditMessageReplyMarkup(
+              chatId = cb.message.map(_.chat.chatId),
+              messageId = cb.message.map(_.messageId),
+              replyMarkup = DialogCalendar.getYearMarkup(newYear).some
+            )
+          )
+        case NextYears =>
+          val newYear = cbData.year.get + 5
+          request(
+            EditMessageReplyMarkup(
+              chatId = cb.message.map(_.chat.chatId),
+              messageId = cb.message.map(_.messageId),
+              replyMarkup = DialogCalendar.getYearMarkup(newYear).some
+            )
+          )
+        case Start =>
+          request(
+            EditMessageReplyMarkup(
+              chatId = cb.message.map(_.chat.chatId),
+              messageId = cb.message.map(_.messageId),
+              replyMarkup = DialogCalendar.getMonthMarkup(cbData.year.get).some
+            )
+          )
+        case SetMonth =>
+          request(
+            EditMessageReplyMarkup(
+              chatId = cb.message.map(_.chat.chatId),
+              messageId = cb.message.map(_.messageId),
+              replyMarkup = DialogCalendar.getDayMarkup(cbData.year.get, cbData.month.get).some
+            )
+          )
+        case SetDay =>
+          for {
+            _ <- request(
+              EditMessageReplyMarkup(
+                chatId = cb.message.map(_.chat.chatId),
+                messageId = cb.message.map(_.messageId),
+                replyMarkup = None
+              )
+            )
+            _ <- reply(s"${LocalDate.of(cbData.year.get, cbData.month.get, cbData.day.get)}")
+          } yield ()
       }
     } yield ()
 
-    attemptCommand.handleErrorWith { case err =>
+    attemptCalendar.productR(ackCallback().void).handleErrorWith { case err =>
       error"Error while handling callback ${err.getMessage}" *> ackCallback().void
     }
   }
+
+  onCommand("/calendar") { implicit msg =>
+    for {
+      year <- Async[F].delay(LocalDate.now.getYear)
+      _    <- reply("Elige una fecha", replyMarkup = DialogCalendar.getYearMarkup(year).some)
+    } yield ()
+  }
+
+  // onCallbackQuery { implicit cb =>
+  //   val maybeCommand = BormCommand.extractFrom(cb.data)
+
+  //   val attemptCommand = for {
+  //     command <- Async[F].fromOption(maybeCommand, illegalCbData)
+  //     _ <- command match {
+  //       case search: BormCommand.Search =>
+  //         runSearch(search) { commandResult =>
+  //           val editMessage = EditMessageText(
+  //             chatId = cb.message.map(_.chat.chatId),
+  //             messageId = cb.message.map(_.messageId),
+  //             parseMode = ParseMode.MarkdownV2.some,
+  //             disableWebPagePreview = true.some,
+  //             text = commandResult.searchResult.pretty.escapeMd,
+  //             replyMarkup = commandResult.pagination.some
+  //           )
+
+  //           request(editMessage)
+  //         }.void
+  //       case _ => Async[F].raiseError(commandNotSupported)
+  //     }
+  //   } yield ()
+
+  //   attemptCommand.handleErrorWith { case err =>
+  //     error"Error while handling callback ${err.getMessage}" *> ackCallback().void
+  //   }
+  // }
 
   onCommand(BormCommandType.Search.translation) { implicit msg =>
     for {
@@ -109,31 +197,31 @@ class TelebormBot[F[_]: Async: Logger](
     } yield ()
   }
 
-  onCommand(BormCommandType.SearchWithDate.translation) { implicit msg =>
-    withArgs {
-      case Seq(rawDate, word, words @ _*) =>
-        val dateOrError =
-          Either.catchNonFatal(DateTimeFormatter.ISO_DATE.parse(rawDate, LocalDate.from _))
+  // onCommand(BormCommandType.SearchWithDate.translation) { implicit msg =>
+  //   withArgs {
+  //     case Seq(rawDate, word, words @ _*) =>
+  //       val dateOrError =
+  //         Either.catchNonFatal(DateTimeFormatter.ISO_DATE.parse(rawDate, LocalDate.from _))
 
-        dateOrError.fold(
-          _ => reply(Messages.invalidDateForSearch(rawDate)).void,
-          { _ =>
-            val attemptCommand = for {
-              searchResult <- commandHandler.handleCommand(
-                BormCommand.Search(word :: words.toList, page = 0, none[LocalDate])
-              )
-              _ <- replyMdV2(
-                searchResult.escapeMd,
-                disableWebPagePreview = true.some
-              )
-            } yield ()
+  //       dateOrError.fold(
+  //         _ => reply(Messages.invalidDateForSearch(rawDate)).void,
+  //         { _ =>
+  //           val attemptCommand = for {
+  //             searchResult <- commandHandler.handleCommand(
+  //               BormCommand.Search(word :: words.toList, page = 0, none[LocalDate])
+  //             )
+  //             _ <- replyMdV2(
+  //               searchResult.escapeMd,
+  //               disableWebPagePreview = true.some
+  //             )
+  //           } yield ()
 
-            attemptCommand.onErrorContact
-          }
-        )
-      case _ => reply(Messages.missingArgsForSearchWithDate).void
-    }
-  }
+  //           attemptCommand.onErrorContact
+  //         }
+  //       )
+  //     case _ => reply(Messages.missingArgsForSearchWithDate).void
+  //   }
+  // }
 
   private val isNotCommand: Filter[(models.Message, Option[models.User])] = { case (msg, _) =>
     !msg.text.exists(rawText => BormCommandType.values.map(_.translation).exists(rawText.contains))

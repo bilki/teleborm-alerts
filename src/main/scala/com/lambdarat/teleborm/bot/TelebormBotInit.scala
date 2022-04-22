@@ -33,7 +33,8 @@ class TelebormBotInit[F[_]: Async: Logger](bot: BotBase[F], config: TelegramConf
     List(
       BotCommand(BormCommandType.Help.translation, Messages.helpCommandDescription),
       BotCommand(BormCommandType.Search.translation, Messages.searchCommandDescription),
-      BotCommand(BormCommandType.SearchWithDate.translation, Messages.searchFromCommandDescription)
+      BotCommand("calendar", "Choose date")
+      // BotCommand(BormCommandType.SearchWithDate.translation, Messages.searchFromCommandDescription)
     )
 
   val webhookHandler = HttpRoutes
