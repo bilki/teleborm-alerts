@@ -1,5 +1,7 @@
 package com.lambdarat.teleborm.bot
 
+import com.lambdarat.teleborm.domain.model.BormCommandType
+
 import com.bot4s.telegram.models.InlineKeyboardButton
 import com.bot4s.telegram.models.InlineKeyboardMarkup
 

@@ -1,5 +1,7 @@
 package com.lambdarat.teleborm.bot
 
+import com.lambdarat.teleborm.domain.model.BormCommandType
+
 import java.time.LocalDate
 
 import cats.syntax.all._

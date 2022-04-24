@@ -1,4 +1,4 @@
-package com.lambdarat.teleborm.bot
+package com.lambdarat.teleborm.domain.model
 
 import enumeratum.EnumEntry.Lowercase
 import enumeratum.{Enum, EnumEntry}

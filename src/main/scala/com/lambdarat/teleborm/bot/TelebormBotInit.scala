@@ -3,6 +3,8 @@ package com.lambdarat.teleborm.bot
 import com.lambdarat.teleborm.domain.model.Messages
 import com.lambdarat.teleborm.config.TelegramConfig
 
+import com.lambdarat.teleborm.domain.model.BormCommandType
+
 import cats.effect.kernel.Async
 import cats.effect.kernel.Resource
 import cats.syntax.all._

@@ -14,7 +14,7 @@ import com.bot4s.telegram.models.InlineKeyboardMarkup
 
 object DialogCalendar {
 
-  val tag = "dcalendar"
+  val tag = "calendar"
 
   case class CalendarCallbackData(
       action: CalendarAction,
