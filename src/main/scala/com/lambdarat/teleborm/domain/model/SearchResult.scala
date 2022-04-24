@@ -1,6 +1,4 @@
-package com.lambdarat.teleborm.model
-
-import com.lambdarat.teleborm.bot.Messages
+package com.lambdarat.teleborm.domain.model
 
 final case class SearchResult(records: List[SearchRecord], total: Int) {
 

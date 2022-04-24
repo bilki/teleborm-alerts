@@ -1,6 +1,6 @@
 package com.lambdarat.teleborm.bot
 
-import com.lambdarat.teleborm.bot.Messages
+import com.lambdarat.teleborm.domain.model.Messages
 import com.lambdarat.teleborm.config.TelegramConfig
 
 import cats.effect.kernel.Async

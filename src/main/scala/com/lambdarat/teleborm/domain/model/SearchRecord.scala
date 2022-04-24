@@ -1,7 +1,6 @@
-package com.lambdarat.teleborm.model
+package com.lambdarat.teleborm.domain.model
 
-import com.lambdarat.teleborm.bot.Messages
-import com.lambdarat.teleborm.bot.Messages._
+import com.lambdarat.teleborm.domain.model.Messages._
 
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter

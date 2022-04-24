@@ -2,7 +2,7 @@ package com.lambdarat.teleborm.database
 
 import java.sql.SQLException
 
-import ConversationState._
+import com.lambdarat.teleborm.domain.model._
 import cats.effect.kernel.Async
 import cats.syntax.all._
 import doobie._

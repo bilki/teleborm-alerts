@@ -1,4 +1,4 @@
-package com.lambdarat.teleborm.database
+package com.lambdarat.teleborm.domain.model
 
 import java.time.LocalDateTime
 

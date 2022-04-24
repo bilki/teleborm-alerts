@@ -4,7 +4,7 @@ import com.lambdarat.teleborm.bot.BormCommand
 import com.lambdarat.teleborm.bot.Pagination
 import com.lambdarat.teleborm.client.BormClient
 import com.lambdarat.teleborm.config.BormConfig
-import com.lambdarat.teleborm.model.SearchCommandResult
+import com.lambdarat.teleborm.domain.model.SearchCommandResult
 
 import cats.effect.kernel.Async
 import cats.syntax.all._
