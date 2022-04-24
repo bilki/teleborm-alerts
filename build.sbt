@@ -36,6 +36,7 @@ lazy val root = project
       "com.github.pureconfig"         %% "pureconfig-cats-effect"        % "0.17.1",
       "com.github.pureconfig"         %% "pureconfig-http4s"             % "0.17.1",
       "com.github.pureconfig"         %% "pureconfig-sttp"               % "0.17.1",
+      "com.github.pureconfig"         %% "pureconfig-enumeratum"         % "0.17.1",
       "org.flywaydb"                   % "flyway-core"                   % "8.5.8",
       "org.http4s"                    %% "http4s-core"                   % "0.23.11",
       "org.http4s"                    %% "http4s-dsl"                    % "0.23.11",

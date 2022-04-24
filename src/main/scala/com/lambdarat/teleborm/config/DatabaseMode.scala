@@ -1,11 +1,10 @@
 package com.lambdarat.teleborm.config
 
-import cats.syntax.all._
 import enumeratum.Enum
 import enumeratum.EnumEntry
 import enumeratum.EnumEntry.Lowercase
-import pureconfig.ConfigReader
-import pureconfig.error.CannotConvert
+import pureconfig._
+import pureconfig.module.enumeratum.enumeratumConfigConvert
 
 sealed trait DatabaseMode extends EnumEntry with Lowercase
 
@@ -17,11 +16,5 @@ object DatabaseMode extends Enum[DatabaseMode] {
   case object Production  extends DatabaseMode
 
   implicit val databaseModeConfigReader: ConfigReader[DatabaseMode] =
-    ConfigReader.stringConfigReader.emap(rawMode =>
-      DatabaseMode
-        .withNameEither(rawMode)
-        .leftMap(err =>
-          CannotConvert(because = err.getMessage, toType = "DatabaseMode", value = rawMode)
-        )
-    )
+    enumeratumConfigConvert[DatabaseMode]
 }
