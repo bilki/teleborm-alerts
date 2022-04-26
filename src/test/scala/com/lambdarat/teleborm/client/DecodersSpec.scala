@@ -1,7 +1,7 @@
 package com.lambdarat.teleborm.client
 
-import com.lambdarat.teleborm.model.SearchRecord
-import com.lambdarat.teleborm.model.SearchResult
+import com.lambdarat.teleborm.domain.model.SearchRecord
+import com.lambdarat.teleborm.domain.model.SearchResult
 
 import java.time.LocalDateTime
 

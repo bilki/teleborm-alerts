@@ -1,6 +1,6 @@
 package com.lambdarat.teleborm
 
-import com.lambdarat.teleborm.bot.TelebormBot
+import com.lambdarat.teleborm.bot.LegacyTelebormBot
 import com.lambdarat.teleborm.bot.TelebormBotInit
 import com.lambdarat.teleborm.client.BormClient
 import com.lambdarat.teleborm.config.TelebormConfig
@@ -46,7 +46,7 @@ object Main extends IOApp {
       transactor       = Transactor.fromDataSource[IO](datasource, ec)
       userStateStorage = new UserStateStorage[IO](transactor)
       commandHandler   = new BormCommandHandler[IO](bormClient, config.borm)
-      bot = new TelebormBot[IO](
+      bot = new LegacyTelebormBot[IO](
         loggingSttpClient,
         config.telegram.token,
         commandHandler,

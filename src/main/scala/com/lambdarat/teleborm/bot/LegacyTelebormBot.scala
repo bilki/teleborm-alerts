@@ -1,7 +1,5 @@
 package com.lambdarat.teleborm.bot
 
-import com.lambdarat.teleborm.domain.model._
-import com.lambdarat.teleborm.domain.model.Messages._
 import com.lambdarat.teleborm.calendar.CalendarAction.Ignore
 import com.lambdarat.teleborm.calendar.CalendarAction.NextYears
 import com.lambdarat.teleborm.calendar.CalendarAction.PrevYears
@@ -10,8 +8,11 @@ import com.lambdarat.teleborm.calendar.CalendarAction.SetMonth
 import com.lambdarat.teleborm.calendar.CalendarAction.SetYear
 import com.lambdarat.teleborm.calendar.CalendarAction.Start
 import com.lambdarat.teleborm.calendar.DialogCalendar
-import com.lambdarat.teleborm.handler.BormCommandHandler
+import com.lambdarat.teleborm.database.UserStateStorage
+import com.lambdarat.teleborm.domain.model.Messages._
 import com.lambdarat.teleborm.domain.model.SearchCommandResult
+import com.lambdarat.teleborm.domain.model._
+import com.lambdarat.teleborm.handler.BormCommandHandler
 
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -26,9 +27,8 @@ import com.bot4s.telegram.models
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.syntax._
 import sttp.client3.SttpBackend
-import com.lambdarat.teleborm.database.UserStateStorage
 
-class TelebormBot[F[_]: Async: Logger](
+class LegacyTelebormBot[F[_]: Async: Logger](
     backend: SttpBackend[F, _],
     token: String,
     commandHandler: BormCommandHandler[F],
@@ -51,14 +51,6 @@ class TelebormBot[F[_]: Async: Logger](
   onCommand("start" | BormCommandType.Help.translation) { implicit msg =>
     replyMdV2(Messages.greeting.escapeMd).void
   }
-
-  new IllegalArgumentException(
-    "Not supported command or data in callback"
-  )
-
-  new IllegalArgumentException(
-    "Callback command not supported yet"
-  )
 
   private def runSearch[R](
       command: BormCommand.Search

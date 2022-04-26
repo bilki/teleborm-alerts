@@ -1,8 +1,9 @@
 package com.lambdarat.teleborm.database
 
+import com.lambdarat.teleborm.domain.model._
+
 import java.sql.SQLException
 
-import com.lambdarat.teleborm.domain.model._
 import cats.effect.kernel.Async
 import cats.syntax.all._
 import doobie._

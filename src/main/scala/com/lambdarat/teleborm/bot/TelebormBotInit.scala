@@ -1,14 +1,15 @@
 package com.lambdarat.teleborm.bot
 
-import com.lambdarat.teleborm.domain.model.Messages
 import com.lambdarat.teleborm.config.TelegramConfig
-
 import com.lambdarat.teleborm.domain.model.BormCommandType
+import com.lambdarat.teleborm.domain.model.Messages
 
 import cats.effect.kernel.Async
 import cats.effect.kernel.Resource
 import cats.syntax.all._
 import com.bot4s.telegram.api.BotBase
+import com.bot4s.telegram.api.declarative.Callbacks
+import com.bot4s.telegram.api.declarative.Commands
 import com.bot4s.telegram.marshalling._
 import com.bot4s.telegram.methods.SetMyCommands
 import com.bot4s.telegram.methods.SetWebhook
@@ -26,7 +27,10 @@ import org.http4s.implicits._
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.syntax._
 
-class TelebormBotInit[F[_]: Async: Logger](bot: BotBase[F], config: TelegramConfig) {
+class TelebormBotInit[F[_]: Async: Logger](
+    bot: BotBase[F] with Callbacks[F] with Commands[F],
+    config: TelegramConfig
+) {
 
   private val dsl = new Http4sDsl[F] {}
   import dsl._
